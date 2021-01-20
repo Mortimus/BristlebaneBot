@@ -1,0 +1,1 @@
+Bristlebane bot allows automatic DKP management for bids
