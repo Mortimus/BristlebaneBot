@@ -25,6 +25,7 @@ var bids = map[string]*BidItem{}
 var itemDB map[string]int
 var discord *discordgo.Session
 var investigation Investigation
+var currentTime time.Time // for simulating time
 
 func main() {
 	// Open Configuration and set log output
@@ -174,6 +175,7 @@ func getSource(msg string) string {
 func parseLogLine(log EqLog) {
 	l := LogInit("getSource-main.go")
 	defer l.End()
+	currentTime = log.T
 	if log.Channel != "system" && log.Channel != "guild" && log.Channel != "group" && log.Channel != "raid" {
 		// fmt.Printf("Channel: %s\n", l.channel)
 	}
@@ -239,11 +241,11 @@ func openBid(item string, count int, id int) {
 	}
 	l.InfoF("Opening bid for: %s x%d\n", item, count)
 	bids[item] = &BidItem{}
-	bids[item].startBid()
 	bids[item].Item = item
 	bids[item].Count = count
 	bids[item].ID = id
 	bids[item].URL = configuration.LucyURLPrefix + strconv.Itoa(id)
+	bids[item].startBid()
 	// lookup item id
 }
 
@@ -269,10 +271,7 @@ type BidItem struct {
 	ID                int           `json:"ID"`
 	URL               string        `json:"URL"`
 	Count             int           `json:"Count"`
-	MainBids          []Bid         `json:"MainBids"`
-	SecondmainBids    []Bid         `json:"SecondmainBids"` // TODO: does this make sense?
-	RecruitBids       []Bid         `json:"RecruitBids"`
-	AltBids           []Bid         `json:"AltBids"`
+	Bids              []Bid         `json:"Bids"`
 	Start             time.Time     `json:"Start"`
 	End               time.Time     `json:"End"`
 	Winners           []Winner      `json:"Winners"`
@@ -282,17 +281,17 @@ type BidItem struct {
 func (b *BidItem) startBid() {
 	l := LogInit("startBid-main.go")
 	defer l.End()
-	b.Start = time.Now()
+	b.Start = getTime()
 	b.End = b.Start.Add(time.Duration(time.Duration(configuration.BidTimerMinutes) * time.Minute))
 	// time.NewTimer(3 * time.Minute)
-	_, err := discord.ChannelMessageSend(configuration.LootChannelID, fmt.Sprintf("Bids open for %s %d minutes", b.Item, configuration.BidTimerMinutes))
+	_, err := discord.ChannelMessageSend(configuration.LootChannelID, fmt.Sprintf("Bids open on %s x(%d) for %d minutes", b.Item, b.Count, configuration.BidTimerMinutes))
 	if err != nil {
 		l.ErrorF("Failed to open bid: %s", err.Error())
 	}
 }
 
 func (b *BidItem) isBidEnded() bool {
-	return time.Now().After(b.End)
+	return getTime().After(b.End)
 }
 
 func (b *BidItem) addBid(user string, item string, amount int) {
@@ -517,4 +516,11 @@ func (i *Investigation) addLog(l EqLog) {
 		i.Messages[len(i.Messages)-1] = EqLog{} // or the zero value of T
 		i.Messages = i.Messages[:len(i.Messages)-1]
 	}
+}
+
+func getTime() time.Time {
+	if configuration.ReadEntireLog { // We are simulating/testing things, we need to use time from logs
+		return currentTime
+	}
+	return time.Now()
 }

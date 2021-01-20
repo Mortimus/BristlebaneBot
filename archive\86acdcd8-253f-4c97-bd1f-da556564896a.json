@@ -1,0 +1,936 @@
+{
+ "Item": "Ring of Superiority",
+ "ID": 31222,
+ "URL": "https://lucy.allakhazam.com/item.html?id=31222",
+ "Count": 1,
+ "Bids": [
+  {
+   "Bidder": "Rot",
+   "Amount": 0
+  },
+  {
+   "Bidder": "Rot",
+   "Amount": 0
+  },
+  {
+   "Bidder": "Rot",
+   "Amount": 0
+  },
+  {
+   "Bidder": "Rot",
+   "Amount": 0
+  }
+ ],
+ "Start": "2020-12-05T18:53:54-06:00",
+ "End": "2020-12-05T18:56:54-06:00",
+ "Winners": [
+  {
+   "Name": "Rot",
+   "Amount": 0
+  }
+ ],
+ "InvestigationLogs": {
+  "Messages": [
+   {
+    "Time": "2020-12-05T14:32:07-06:00",
+    "Message": "Talen tells the guild, 'hellooo'",
+    "Channel": "guild",
+    "Source": "Talen"
+   },
+   {
+    "Time": "2020-12-05T14:32:10-06:00",
+    "Message": "Ayamnivay tells the guild, 'Hey Sonne :)'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-05T14:32:13-06:00",
+    "Message": "Bipson tells the guild, 'yoo'",
+    "Channel": "guild",
+    "Source": "Bipson"
+   },
+   {
+    "Time": "2020-12-05T14:32:34-06:00",
+    "Message": "Sonneteer tells the guild, '42 bard lfg'",
+    "Channel": "guild",
+    "Source": "Sonneteer"
+   },
+   {
+    "Time": "2020-12-05T14:32:57-06:00",
+    "Message": "Vetis tells the guild, 'got 2 spots in DN =)'",
+    "Channel": "guild",
+    "Source": "Vetis"
+   },
+   {
+    "Time": "2020-12-05T14:32:58-06:00",
+    "Message": "Vetis tells the guild, '40+'",
+    "Channel": "guild",
+    "Source": "Vetis"
+   },
+   {
+    "Time": "2020-12-05T14:33:09-06:00",
+    "Message": "Sonneteer tells the guild, 'omw Vetis'",
+    "Channel": "guild",
+    "Source": "Sonneteer"
+   },
+   {
+    "Time": "2020-12-05T14:41:00-06:00",
+    "Message": "Bipson tells you, 'ahh nice'",
+    "Channel": "tell",
+    "Source": "Bipson"
+   },
+   {
+    "Time": "2020-12-05T14:44:57-06:00",
+    "Message": "Stauff tells the guild, 'Heya Vets'",
+    "Channel": "guild",
+    "Source": "Stauff"
+   },
+   {
+    "Time": "2020-12-05T14:45:04-06:00",
+    "Message": "Barthos tells the guild, 'howdy'",
+    "Channel": "guild",
+    "Source": "Barthos"
+   },
+   {
+    "Time": "2020-12-05T14:45:04-06:00",
+    "Message": "Vetis tells the guild, 'one spot in DN Stauff'",
+    "Channel": "guild",
+    "Source": "Vetis"
+   },
+   {
+    "Time": "2020-12-05T14:45:05-06:00",
+    "Message": "Ayamnivay tells the guild, 'Hey Stauff :)'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-05T14:45:08-06:00",
+    "Message": "Bipson tells the guild, 'hihi'",
+    "Channel": "guild",
+    "Source": "Bipson"
+   },
+   {
+    "Time": "2020-12-05T14:45:14-06:00",
+    "Message": "Snwo tells the guild, 'hello~'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-05T14:45:22-06:00",
+    "Message": "Snwo tells the guild, 'Nice, two good guild groups grinding away'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-05T16:39:08-06:00",
+    "Message": "Tigermancer tells the guild, 'evening vets'",
+    "Channel": "guild",
+    "Source": "Tigermancer"
+   },
+   {
+    "Time": "2020-12-05T16:39:15-06:00",
+    "Message": "Wufang tells the guild, 'howdies.'",
+    "Channel": "guild",
+    "Source": "Wufang"
+   },
+   {
+    "Time": "2020-12-05T16:39:18-06:00",
+    "Message": "Glooping tells the guild, 'hi tigermancer'",
+    "Channel": "guild",
+    "Source": "Glooping"
+   },
+   {
+    "Time": "2020-12-05T16:39:20-06:00",
+    "Message": "Snwo tells the guild, 'hello~'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-05T16:39:34-06:00",
+    "Message": "Porrt tells the guild, 'hello'",
+    "Channel": "guild",
+    "Source": "Porrt"
+   },
+   {
+    "Time": "2020-12-05T16:40:04-06:00",
+    "Message": "Tigermancer tells the guild, 'anyone have any idea if tormax is spawning soon?'",
+    "Channel": "guild",
+    "Source": "Tigermancer"
+   },
+   {
+    "Time": "2020-12-05T16:40:12-06:00",
+    "Message": "Ayamnivay tells the guild, 'Hey Tiger'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-05T17:32:42-06:00",
+    "Message": "Talun tells the guild, 'can i get a pick up in WL?'",
+    "Channel": "guild",
+    "Source": "Talun"
+   },
+   {
+    "Time": "2020-12-05T17:32:54-06:00",
+    "Message": "Nosirrah tells the guild, 'does anyone have those resist pots on them so I can use them on Snwo/Nosirrah? (I'm pretty high on resists for Nosirrah, but would like to push them rookie numbers up on Snwo)'",
+    "Channel": "guild",
+    "Source": "Nosirrah"
+   },
+   {
+    "Time": "2020-12-05T17:33:37-06:00",
+    "Message": "Glooping tells the guild, 'Ok so Glooping corpse in pick 52 of Sirens'",
+    "Channel": "guild",
+    "Source": "Glooping"
+   },
+   {
+    "Time": "2020-12-05T17:34:14-06:00",
+    "Message": "Olivercromwell tells the guild, 'All in the valley of Dragons     Rode the sixty   Forward, the Monk Brigade!  Charge for the Flurry Drakes!  he said.  Into the valley of Death     Rode the sixty'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-05T17:34:14-06:00",
+    "Message": "Raage tells the guild, 'Guild Event in Sirens :P'",
+    "Channel": "guild",
+    "Source": "Raage"
+   },
+   {
+    "Time": "2020-12-05T17:34:16-06:00",
+    "Message": "Penelo tells the guild, 'Tov Raid Starting now!  Send tell for Raid/Dzadd'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T17:34:16-06:00",
+    "Message": "Penelo tells the guild, 'Agent of Change outside Dragon Necropolis Zone line in Western Wastes'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T17:34:17-06:00",
+    "Message": "Penelo tells the guild, 'Say \"Location\"'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T17:34:17-06:00",
+    "Message": "Sweatybalms tells the guild, 'send invite again por favor. was afk sorry '",
+    "Channel": "guild",
+    "Source": "Sweatybalms"
+   },
+   {
+    "Time": "2020-12-05T17:35:42-06:00",
+    "Message": "Vinadru tells the guild, 'thank you for sending me aego'",
+    "Channel": "guild",
+    "Source": "Vinadru"
+   },
+   {
+    "Time": "2020-12-05T17:35:53-06:00",
+    "Message": "Wufang tells the guild, 'later all. good luck with raid and i'll see ya's tomorrow.'",
+    "Channel": "guild",
+    "Source": "Wufang"
+   },
+   {
+    "Time": "2020-12-05T17:36:14-06:00",
+    "Message": "Bipp tells the guild, 'any pickup at SFG?'",
+    "Channel": "guild",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-05T17:39:38-06:00",
+    "Message": "Blossom tells the guild, 'could i get a raid invite?'",
+    "Channel": "guild",
+    "Source": "Blossom"
+   },
+   {
+    "Time": "2020-12-05T17:40:03-06:00",
+    "Message": "Nosirrah tells the guild, 'Someone lev Snwo at CS ring if tyou pass him?'",
+    "Channel": "guild",
+    "Source": "Nosirrah"
+   },
+   {
+    "Time": "2020-12-05T17:40:33-06:00",
+    "Message": "Wufang tells the guild, 'logged out, then remembered i came to EC tunnel to buy new disc. DUH\u003e'",
+    "Channel": "guild",
+    "Source": "Wufang"
+   },
+   {
+    "Time": "2020-12-05T17:40:55-06:00",
+    "Message": "Bipp tells the guild, 'send penelo tell if ya didnt get inv btw'",
+    "Channel": "guild",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-05T17:41:35-06:00",
+    "Message": "Wufang tells the guild, 'then after i buy it, i realize i already had it. Maybe i should stay home? LOL'",
+    "Channel": "guild",
+    "Source": "Wufang"
+   },
+   {
+    "Time": "2020-12-05T17:41:43-06:00",
+    "Message": "Bipp tells the guild, 'lmao doh'",
+    "Channel": "guild",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-05T17:42:06-06:00",
+    "Message": "Wufang tells the guild, 'cost like 90 plat to. :('",
+    "Channel": "guild",
+    "Source": "Wufang"
+   },
+   {
+    "Time": "2020-12-05T17:42:19-06:00",
+    "Message": "Wufang tells the guild, 'and no drop so can't sell back the one i already bought. '",
+    "Channel": "guild",
+    "Source": "Wufang"
+   },
+   {
+    "Time": "2020-12-05T17:42:25-06:00",
+    "Message": "Penelo tells the guild, 'Tov Raid Starting now!  Send tell for Raid/Dzadd'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T17:42:26-06:00",
+    "Message": "Penelo tells the guild, 'Agent of Change outside Dragon Necropolis Zone line in Western Wastes'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T17:42:26-06:00",
+    "Message": "Penelo tells the guild, 'Say \"Location\"'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T17:43:56-06:00",
+    "Message": "Wufang tells the guild, 'ok now i'm really loging out, good luck guys.'",
+    "Channel": "guild",
+    "Source": "Wufang"
+   },
+   {
+    "Time": "2020-12-05T17:44:10-06:00",
+    "Message": "Effie tells the guild, 'put your mic on or yell louder!'",
+    "Channel": "guild",
+    "Source": "Effie"
+   },
+   {
+    "Time": "2020-12-05T17:44:13-06:00",
+    "Message": "Snwo tells the guild, 'See ya man'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-05T17:44:46-06:00",
+    "Message": "Porrt tells you, 'can you twitch me?'",
+    "Channel": "tell",
+    "Source": "Porrt"
+   },
+   {
+    "Time": "2020-12-05T17:45:30-06:00",
+    "Message": "Porrt tells you, 'who do i send tell for raid invite?'",
+    "Channel": "tell",
+    "Source": "Porrt"
+   },
+   {
+    "Time": "2020-12-05T17:46:29-06:00",
+    "Message": "Cronos tells the guild, '/get'",
+    "Channel": "guild",
+    "Source": "Cronos"
+   },
+   {
+    "Time": "2020-12-05T17:47:42-06:00",
+    "Message": "Snwo tells the guild, 'also Jolt lol I'm a real ranger now'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-05T17:49:52-06:00",
+    "Message": "Renab tells the guild, 'nah, you are not a real ranger until you get eaten by every boss in the game'",
+    "Channel": "guild",
+    "Source": "Renab"
+   },
+   {
+    "Time": "2020-12-05T17:50:46-06:00",
+    "Message": "Porrt tells you, 'all new names, first raid lol'",
+    "Channel": "tell",
+    "Source": "Porrt"
+   },
+   {
+    "Time": "2020-12-05T17:53:33-06:00",
+    "Message": "Porrt tells you, 'also first druid hah, usually a bard or necro'",
+    "Channel": "tell",
+    "Source": "Porrt"
+   },
+   {
+    "Time": "2020-12-05T17:56:31-06:00",
+    "Message": "Penelo tells the guild, 'Tov Raid Starting now!  Send tell for Raid/Dzadd'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T17:56:31-06:00",
+    "Message": "Penelo tells the guild, 'Agent of Change outside Dragon Necropolis Zone line in Western Wastes'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T17:56:31-06:00",
+    "Message": "Penelo tells the guild, 'Say \"Location\"'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T17:57:54-06:00",
+    "Message": "Xarielx tells the guild, 'brb'",
+    "Channel": "guild",
+    "Source": "Xarielx"
+   },
+   {
+    "Time": "2020-12-05T18:03:57-06:00",
+    "Message": "Cukkon tells the guild, 'hey guys.....sorry i'm late. heading that way'",
+    "Channel": "guild",
+    "Source": "Cukkon"
+   },
+   {
+    "Time": "2020-12-05T18:04:17-06:00",
+    "Message": "Penelo tells the guild, 'Tov Raid Starting now!  Send tell for Raid/Dzadd'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:04:17-06:00",
+    "Message": "Penelo tells the guild, 'Agent of Change outside Dragon Necropolis Zone line in Western Wastes'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:04:17-06:00",
+    "Message": "Penelo tells the guild, 'Say \"Location\"'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:05:16-06:00",
+    "Message": "Cukkon tells the guild, 'roger'",
+    "Channel": "guild",
+    "Source": "Cukkon"
+   },
+   {
+    "Time": "2020-12-05T18:11:07-06:00",
+    "Message": "Voltha tells you, 'Not sure made them a week ago '",
+    "Channel": "tell",
+    "Source": "Voltha"
+   },
+   {
+    "Time": "2020-12-05T18:11:16-06:00",
+    "Message": "Voltha tells you, 'want a stack?'",
+    "Channel": "tell",
+    "Source": "Voltha"
+   },
+   {
+    "Time": "2020-12-05T18:12:15-06:00",
+    "Message": "Topmarine tells you, 'your getting low health!!'",
+    "Channel": "tell",
+    "Source": "Topmarine"
+   },
+   {
+    "Time": "2020-12-05T18:12:52-06:00",
+    "Message": "Voltha tells you, 'I think I made them for about 15plat '",
+    "Channel": "tell",
+    "Source": "Voltha"
+   },
+   {
+    "Time": "2020-12-05T18:13:02-06:00",
+    "Message": "Cronos tells the guild, 'People who need a CoTH - Gausbert, Zortax, Ravnor, Fenbus, Scylla, Tigerwolf, Porrt, Mysfit, Talen, Galdo, Cadenza, Renab, Dromi, Sinidan, xarielx'",
+    "Channel": "guild",
+    "Source": "Cronos"
+   },
+   {
+    "Time": "2020-12-05T18:13:02-06:00",
+    "Message": "Cronos tells the guild, 'People who need a CoTH - Gausbert, Zortax, Ravnor, Fenbus, Scylla, Tigerwolf, Porrt, Mysfit, Talen, Galdo, Cadenza, Renab, Dromi, Sinidan, xarielx'",
+    "Channel": "guild",
+    "Source": "Cronos"
+   },
+   {
+    "Time": "2020-12-05T18:13:09-06:00",
+    "Message": "Cronos tells the guild, 'People who need a CoTH - Gausbert, Zortax, Ravnor, Fenbus, Scylla, Tigerwolf, Porrt, Mysfit, Talen, Galdo, Cadenza, Renab, Dromi, Sinidan, xarielx'",
+    "Channel": "guild",
+    "Source": "Cronos"
+   },
+   {
+    "Time": "2020-12-05T18:14:16-06:00",
+    "Message": "Topmarine tells the guild, 'i looked down and you where in the 30's i was like oo crap lol'",
+    "Channel": "guild",
+    "Source": "Topmarine"
+   },
+   {
+    "Time": "2020-12-05T18:14:34-06:00",
+    "Message": "Cronos tells the guild, 'People who need a CoTH - Gausbert, Zortax, Ravnor, Fenbus, Scylla, Tigerwolf, Porrt, Mysfit, Talen, Galdo, Cadenza, Renab, Dromi, Sinidan, xarielx, Abram, '",
+    "Channel": "guild",
+    "Source": "Cronos"
+   },
+   {
+    "Time": "2020-12-05T18:17:22-06:00",
+    "Message": "Vinadru tells the guild, 'you need to come to Canada have real beer and whiskey'",
+    "Channel": "guild",
+    "Source": "Vinadru"
+   },
+   {
+    "Time": "2020-12-05T18:17:53-06:00",
+    "Message": "Draeadin tells the guild, 'austin with it's defunded police...'",
+    "Channel": "guild",
+    "Source": "Draeadin"
+   },
+   {
+    "Time": "2020-12-05T18:19:21-06:00",
+    "Message": "Glooping tells the guild, 'Im eating pizza right now if that counts Effie'",
+    "Channel": "guild",
+    "Source": "Glooping"
+   },
+   {
+    "Time": "2020-12-05T18:19:37-06:00",
+    "Message": "Coltaine tells the guild, 'pineapple or nah?'",
+    "Channel": "guild",
+    "Source": "Coltaine"
+   },
+   {
+    "Time": "2020-12-05T18:21:01-06:00",
+    "Message": "Topmarine tells you, 'lmao i totally forgot about that'",
+    "Channel": "tell",
+    "Source": "Topmarine"
+   },
+   {
+    "Time": "2020-12-05T18:23:39-06:00",
+    "Message": "Topmarine tells the guild, 'im too drunk to taste this chicken...'",
+    "Channel": "guild",
+    "Source": "Topmarine"
+   },
+   {
+    "Time": "2020-12-05T18:24:03-06:00",
+    "Message": "Aano tells the guild, 'done'",
+    "Channel": "guild",
+    "Source": "Aano"
+   },
+   {
+    "Time": "2020-12-05T18:25:42-06:00",
+    "Message": "Cronos tells the guild, 'Prince Ticklez out here lookin' like a whole ass SNACK'",
+    "Channel": "guild",
+    "Source": "Cronos"
+   },
+   {
+    "Time": "2020-12-05T18:25:51-06:00",
+    "Message": "Penelo tells the guild, 'Tov Raid Starting now!  Send tell for Raid/Dzadd'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:25:51-06:00",
+    "Message": "Penelo tells the guild, 'Agent of Change outside Dragon Necropolis Zone line in Western Wastes'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:25:51-06:00",
+    "Message": "Penelo tells the guild, 'Say \"Location\"'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:29:45-06:00",
+    "Message": "Zortax tells the guild, 'brb 1 min '",
+    "Channel": "guild",
+    "Source": "Zortax"
+   },
+   {
+    "Time": "2020-12-05T18:32:19-06:00",
+    "Message": "Mayfair tells the guild, 'Good evening everyone'",
+    "Channel": "guild",
+    "Source": "Mayfair"
+   },
+   {
+    "Time": "2020-12-05T18:32:24-06:00",
+    "Message": "Glooping tells the guild, 'Hi Mayfair'",
+    "Channel": "guild",
+    "Source": "Glooping"
+   },
+   {
+    "Time": "2020-12-05T18:32:28-06:00",
+    "Message": "Mysfit tells the guild, 'heya mayfair!'",
+    "Channel": "guild",
+    "Source": "Mysfit"
+   },
+   {
+    "Time": "2020-12-05T18:32:30-06:00",
+    "Message": "Coltaine tells the guild, 'evening'",
+    "Channel": "guild",
+    "Source": "Coltaine"
+   },
+   {
+    "Time": "2020-12-05T18:32:32-06:00",
+    "Message": "Person tells the guild, 'hiya Mayfair'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-05T18:32:37-06:00",
+    "Message": "Baconlegs tells the guild, 'hello!'",
+    "Channel": "guild",
+    "Source": "Baconlegs"
+   },
+   {
+    "Time": "2020-12-05T18:32:38-06:00",
+    "Message": "Topmarine tells you, 'so we drop pets just to confirm yes?'",
+    "Channel": "tell",
+    "Source": "Topmarine"
+   },
+   {
+    "Time": "2020-12-05T18:33:03-06:00",
+    "Message": "Topmarine tells you, 'yeah that is why i was like umm im confused im a necro lol'",
+    "Channel": "tell",
+    "Source": "Topmarine"
+   },
+   {
+    "Time": "2020-12-05T18:33:10-06:00",
+    "Message": "Topmarine tells you, 'cause we rule lol'",
+    "Channel": "tell",
+    "Source": "Topmarine"
+   },
+   {
+    "Time": "2020-12-05T18:33:55-06:00",
+    "Message": "Ryze tells the guild, 'hey guys'",
+    "Channel": "guild",
+    "Source": "Ryze"
+   },
+   {
+    "Time": "2020-12-05T18:34:01-06:00",
+    "Message": "Glooping tells the guild, 'hi ryze'",
+    "Channel": "guild",
+    "Source": "Glooping"
+   },
+   {
+    "Time": "2020-12-05T18:34:14-06:00",
+    "Message": "Person tells the guild, 'hiya Ryme'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-05T18:34:20-06:00",
+    "Message": "Person tells the guild, 'Ryze*'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-05T18:34:23-06:00",
+    "Message": "Ryze tells the guild, 'heh'",
+    "Channel": "guild",
+    "Source": "Ryze"
+   },
+   {
+    "Time": "2020-12-05T18:34:25-06:00",
+    "Message": "Mayfair tells the guild, 'Hi Ryze'",
+    "Channel": "guild",
+    "Source": "Mayfair"
+   },
+   {
+    "Time": "2020-12-05T18:34:33-06:00",
+    "Message": "Ryze tells the guild, 'ima try to get a port real quick'",
+    "Channel": "guild",
+    "Source": "Ryze"
+   },
+   {
+    "Time": "2020-12-05T18:37:57-06:00",
+    "Message": "Penelo tells the guild, 'hiya! '",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:37:58-06:00",
+    "Message": "Penelo tells the guild, 'Tov Raid Starting now!  Send tell for Raid/Dzadd'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:37:59-06:00",
+    "Message": "Penelo tells the guild, 'Agent of Change outside Dragon Necropolis Zone line in Western Wastes'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:37:59-06:00",
+    "Message": "Penelo tells the guild, 'Say \"Location\"'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:44:36-06:00",
+    "Message": "Glooping tells you, 'yeah i dont have that clicky'",
+    "Channel": "tell",
+    "Source": "Glooping"
+   },
+   {
+    "Time": "2020-12-05T18:46:27-06:00",
+    "Message": "You say to your guild, 'Circlet of Summer bids to Mortimus, pst 2min'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-05T18:46:34-06:00",
+    "Message": "Ravnor tells the guild, 'Aaryonar in 779s, 786k @1008 | Person 52254 | Ravnor 41814 | Galdo 39554 | Yzzy 38677 | Abram 37433 | Penelo 36705 | Sinidan 35180 | Glooping 32564 | Baconlegs 30630 | Mysfit 27551 {$} | Bramil 25321 | Destrod 25146 | Talun 22357 | Wallen 21474 | Coltaine 20501'",
+    "Channel": "guild",
+    "Source": "Ravnor"
+   },
+   {
+    "Time": "2020-12-05T18:46:41-06:00",
+    "Message": "Ravnor tells the guild, 'Aaryonar in 779s, 221k AH | Voltha 30834 AH | Milliardo 23374 AH | Bunzz 23361 AH | Olivercromwell 20700 AH | Silvaefar 19684 AH | Vinadru 16660 AH | Elynise 11947 AH | Porrt 10010 AH | Aano 9247 AH | Solaryn 6933 AH | Iilenye 6540 AH | Patchouli 5556 AH | Aaryonar 5396 AH | DI 5396 AH | Impulse 4716 AH'",
+    "Channel": "guild",
+    "Source": "Ravnor"
+   },
+   {
+    "Time": "2020-12-05T18:46:53-06:00",
+    "Message": "Destrod tells the guild, 'Katana of Pain Taking bids pst. Please state your rank with your bid. Bids close in 2 mins.'",
+    "Channel": "guild",
+    "Source": "Destrod"
+   },
+   {
+    "Time": "2020-12-05T18:47:02-06:00",
+    "Message": "Blossom tells you, '170 main'",
+    "Channel": "tell",
+    "Source": "Blossom"
+   },
+   {
+    "Time": "2020-12-05T18:47:28-06:00",
+    "Message": "You say to your guild, 'Circlet of Summer bids to Mortimus, pst 1min'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-05T18:47:52-06:00",
+    "Message": "Patchouli tells you, 'Circlet of Summer250 main'",
+    "Channel": "tell",
+    "Source": "Patchouli"
+   },
+   {
+    "Time": "2020-12-05T18:47:54-06:00",
+    "Message": "Silvaefar tells you, 'summer head - 305 dkp -main'",
+    "Channel": "tell",
+    "Source": "Silvaefar"
+   },
+   {
+    "Time": "2020-12-05T18:48:08-06:00",
+    "Message": "Vinadru tells you, '150 dkp for Circlet of Summer'",
+    "Channel": "tell",
+    "Source": "Vinadru"
+   },
+   {
+    "Time": "2020-12-05T18:48:09-06:00",
+    "Message": "Destrod tells the guild, 'Katana of Pain Taking bids pst. Please state your rank with your bid. Bids close in 1 min'",
+    "Channel": "guild",
+    "Source": "Destrod"
+   },
+   {
+    "Time": "2020-12-05T18:48:27-06:00",
+    "Message": "Scylla tells you, '105 for circlet, main (sad face)'",
+    "Channel": "tell",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-05T18:48:58-06:00",
+    "Message": "Scylla tells you, 'Imma bid that 105 on everything tho =)'",
+    "Channel": "tell",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-05T18:49:00-06:00",
+    "Message": "You say to your guild, 'Circlet of Summer bids to Mortimus, pst 30s'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-05T18:49:20-06:00",
+    "Message": "Destrod tells the guild, 'Bids closed on Katana of Pain Winner is Cazzbat with a bid of 300 dkp he gets the item for 155 dkp.'",
+    "Channel": "guild",
+    "Source": "Destrod"
+   },
+   {
+    "Time": "2020-12-05T18:49:32-06:00",
+    "Message": "Impulse tells you, '25 on circle plz'",
+    "Channel": "tell",
+    "Source": "Impulse"
+   },
+   {
+    "Time": "2020-12-05T18:49:54-06:00",
+    "Message": "You say to your guild, 'Circlet of Summer bids to Mortimus, CLOSED Gratz Silvaefar for 255dkp'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-05T18:50:04-06:00",
+    "Message": "Olivercromwell tells the guild, 'thats a steal'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-05T18:50:34-06:00",
+    "Message": "You say to your guild, 'Ring of Superiority bids to Mortimus, pst 2min'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-05T18:50:40-06:00",
+    "Message": "Scylla tells you, '105 for ring, main =P'",
+    "Channel": "tell",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-05T18:50:40-06:00",
+    "Message": "Cronos tells you, '15 main'",
+    "Channel": "tell",
+    "Source": "Cronos"
+   },
+   {
+    "Time": "2020-12-05T18:50:42-06:00",
+    "Message": "Vinadru tells you, '150 dkp Ring of Superiority'",
+    "Channel": "tell",
+    "Source": "Vinadru"
+   },
+   {
+    "Time": "2020-12-05T18:50:48-06:00",
+    "Message": "Ayamnivay tells you, '500 dkp Main for Ring of Superiority'",
+    "Channel": "tell",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-05T18:50:48-06:00",
+    "Message": "Destrod tells you, '200 dkp main bid on Ring of Superiority'",
+    "Channel": "tell",
+    "Source": "Destrod"
+   },
+   {
+    "Time": "2020-12-05T18:50:50-06:00",
+    "Message": "Ryze tells you, '500 dkp on Ring of Superiority for main'",
+    "Channel": "tell",
+    "Source": "Ryze"
+   },
+   {
+    "Time": "2020-12-05T18:50:53-06:00",
+    "Message": "Sinidan tells you, 'Ring of Superiority 200 main'",
+    "Channel": "tell",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-05T18:50:54-06:00",
+    "Message": "Tankybear tells you, '15 main Ring of Superiority'",
+    "Channel": "tell",
+    "Source": "Tankybear"
+   },
+   {
+    "Time": "2020-12-05T18:50:56-06:00",
+    "Message": "Olivercromwell tells you, 'bid main 445'",
+    "Channel": "tell",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-05T18:51:04-06:00",
+    "Message": "Glooping tells you, 'Ring of Superiority 310 DKP MAIN'",
+    "Channel": "tell",
+    "Source": "Glooping"
+   },
+   {
+    "Time": "2020-12-05T18:51:06-06:00",
+    "Message": "Yzzy tells you, 'Ring of Superiority main bidding 200dkp'",
+    "Channel": "tell",
+    "Source": "Yzzy"
+   },
+   {
+    "Time": "2020-12-05T18:51:11-06:00",
+    "Message": "Sacristan tells you, 'Ring of Superiority 100 main'",
+    "Channel": "tell",
+    "Source": "Sacristan"
+   },
+   {
+    "Time": "2020-12-05T18:51:12-06:00",
+    "Message": "Draeadin tells you, '200 dkp'",
+    "Channel": "tell",
+    "Source": "Draeadin"
+   },
+   {
+    "Time": "2020-12-05T18:51:19-06:00",
+    "Message": "Trystyl tells you, 'Ring of Superiority 400 main'",
+    "Channel": "tell",
+    "Source": "Trystyl"
+   },
+   {
+    "Time": "2020-12-05T18:51:22-06:00",
+    "Message": "Patchouli tells you, 'Ring of Superiority 250 main '",
+    "Channel": "tell",
+    "Source": "Patchouli"
+   },
+   {
+    "Time": "2020-12-05T18:51:33-06:00",
+    "Message": "Blossom tells you, '20 main'",
+    "Channel": "tell",
+    "Source": "Blossom"
+   },
+   {
+    "Time": "2020-12-05T18:51:45-06:00",
+    "Message": "Coltaine tells you, '150 mate'",
+    "Channel": "tell",
+    "Source": "Coltaine"
+   },
+   {
+    "Time": "2020-12-05T18:51:51-06:00",
+    "Message": "Thunndar tells you, '100 main'",
+    "Channel": "tell",
+    "Source": "Thunndar"
+   },
+   {
+    "Time": "2020-12-05T18:52:15-06:00",
+    "Message": "Fenbus tells you, 'Ring of Superiority 100 Main'",
+    "Channel": "tell",
+    "Source": "Fenbus"
+   },
+   {
+    "Time": "2020-12-05T18:52:23-06:00",
+    "Message": "Talen tells you, 'Ring of Superiority 400 main'",
+    "Channel": "tell",
+    "Source": "Talen"
+   },
+   {
+    "Time": "2020-12-05T18:52:33-06:00",
+    "Message": "Penelo tells you, '1000dkp Ring of Superiority main'",
+    "Channel": "tell",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-05T18:52:33-06:00",
+    "Message": "Nosirrah tells you, 'Ring of Superiority 150 MAIN'",
+    "Channel": "tell",
+    "Source": "Nosirrah"
+   },
+   {
+    "Time": "2020-12-05T18:53:00-06:00",
+    "Message": "Cazzbat tells you, '150 dkp'",
+    "Channel": "tell",
+    "Source": "Cazzbat"
+   },
+   {
+    "Time": "2020-12-05T18:53:54-06:00",
+    "Message": "You say to your guild, 'Ring of Superiority bids to Mortimus, pst 30s'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-05T18:54:13-06:00",
+    "Message": "Impulse tells you, '85 on ring plz'",
+    "Channel": "tell",
+    "Source": "Impulse"
+   },
+   {
+    "Time": "2020-12-05T18:54:54-06:00",
+    "Message": "You say to your guild, 'Ring of Superiority bids to Mortimus, CLOSED Gratz Penelo for 505dkp'",
+    "Channel": "guild",
+    "Source": "You"
+   }
+  ]
+ }
+}

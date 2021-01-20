@@ -1,0 +1,936 @@
+{
+ "Item": "Halo of the Enlightened",
+ "ID": 1549,
+ "URL": "https://lucy.allakhazam.com/item.html?id=1549",
+ "Count": 1,
+ "Bids": [
+  {
+   "Bidder": "Rot",
+   "Amount": 0
+  },
+  {
+   "Bidder": "Rot",
+   "Amount": 0
+  },
+  {
+   "Bidder": "Rot",
+   "Amount": 0
+  },
+  {
+   "Bidder": "Rot",
+   "Amount": 0
+  }
+ ],
+ "Start": "2020-12-01T20:23:03-06:00",
+ "End": "2020-12-01T20:26:03-06:00",
+ "Winners": [
+  {
+   "Name": "Rot",
+   "Amount": 0
+  }
+ ],
+ "InvestigationLogs": {
+  "Messages": [
+   {
+    "Time": "2020-12-01T18:23:12-06:00",
+    "Message": "Zobac tells the guild, 'Circlet of the Falinkan'",
+    "Channel": "guild",
+    "Source": "Zobac"
+   },
+   {
+    "Time": "2020-12-01T18:23:18-06:00",
+    "Message": "Olivercromwell tells the guild, 'nice'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T18:23:45-06:00",
+    "Message": "Olivercromwell tells the guild, 'super good for nec/shm/enc too'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T18:23:53-06:00",
+    "Message": "Ravnor tells the guild, 'Grats!'",
+    "Channel": "guild",
+    "Source": "Ravnor"
+   },
+   {
+    "Time": "2020-12-01T18:23:59-06:00",
+    "Message": "Olivercromwell tells the guild, 'of course, with those stats is good for anyone'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T18:24:00-06:00",
+    "Message": "Tyrus tells the guild, 'nice helm'",
+    "Channel": "guild",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T18:24:09-06:00",
+    "Message": "Xarielx tells the guild, 'drool!!!'",
+    "Channel": "guild",
+    "Source": "Xarielx"
+   },
+   {
+    "Time": "2020-12-01T18:27:10-06:00",
+    "Message": "Tyrus tells the guild, 'invites for Fear/Velks going out in a few minutes. Hit accept if you're coming'",
+    "Channel": "guild",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T18:27:35-06:00",
+    "Message": "Snwo tells the guild, 'was hoping to be 46 by then :('",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T18:27:38-06:00",
+    "Message": "Olivercromwell tells the guild, 'No vp tonight Ty?'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T18:27:43-06:00",
+    "Message": "Snwo tells the guild, 'but this group kept falling apart'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T18:28:05-06:00",
+    "Message": "Snwo tells the guild, 'one TEQB druid that didn't know where Frenzy was...'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T18:28:07-06:00",
+    "Message": "Penelo tells the guild, 'oooh VP, don't tease me OliC'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T18:28:10-06:00",
+    "Message": "Tyrus tells the guild, 'I might try to get VP going after Velks, last week we didn't have nearly enough to get going.'",
+    "Channel": "guild",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T18:30:46-06:00",
+    "Message": "Ayamnivay tells the guild, 'Hey Vets :D'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T18:31:22-06:00",
+    "Message": "Wallen tells the guild, 'hola ayamnivay'",
+    "Channel": "guild",
+    "Source": "Wallen"
+   },
+   {
+    "Time": "2020-12-01T18:31:23-06:00",
+    "Message": "Tyrus tells the guild, 'hey Ayamnivay'",
+    "Channel": "guild",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T18:32:50-06:00",
+    "Message": "Snwo tells the guild, 'hey guys, gonna sit out this raid maybe, I'll jump on Nosirrah if I feel less retarded by 8'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T18:33:55-06:00",
+    "Message": "Olivercromwell tells the guild, 'anyone have any Icepaw Kob paws? or Coldain heads?'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T18:35:40-06:00",
+    "Message": "Ayamnivay tells the guild, 'Don't wizards have South Ro teleports?'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T18:35:46-06:00",
+    "Message": "Xarielx tells the guild, 'yes'",
+    "Channel": "guild",
+    "Source": "Xarielx"
+   },
+   {
+    "Time": "2020-12-01T18:35:57-06:00",
+    "Message": "Fenbus tells the guild, 'Evac only i think'",
+    "Channel": "guild",
+    "Source": "Fenbus"
+   },
+   {
+    "Time": "2020-12-01T18:36:04-06:00",
+    "Message": "Fenbus tells the guild, 'Port is NRO i believe'",
+    "Channel": "guild",
+    "Source": "Fenbus"
+   },
+   {
+    "Time": "2020-12-01T18:36:10-06:00",
+    "Message": "Ayamnivay tells the guild, 'Gothca'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T18:36:10-06:00",
+    "Message": "Xarielx tells the guild, 'we have north ro not south'",
+    "Channel": "guild",
+    "Source": "Xarielx"
+   },
+   {
+    "Time": "2020-12-01T18:36:22-06:00",
+    "Message": "Xarielx tells the guild, 'druid have feerot port'",
+    "Channel": "guild",
+    "Source": "Xarielx"
+   },
+   {
+    "Time": "2020-12-01T18:36:23-06:00",
+    "Message": "Ayamnivay tells the guild, 'Gotcha. For some reason my hands like Gothca'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T18:36:29-06:00",
+    "Message": "Penelo tells the guild, 'if you are looking to come to feerrott, the Cazic port + evac is closest'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T18:36:35-06:00",
+    "Message": "Fenbus tells the guild, 'Druids have SRO'",
+    "Channel": "guild",
+    "Source": "Fenbus"
+   },
+   {
+    "Time": "2020-12-01T18:36:58-06:00",
+    "Message": "Ayamnivay tells the guild, 'Cazic! That's what I couldn't remember'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T18:37:24-06:00",
+    "Message": "Abram tells the guild, 'crashed after i died'",
+    "Channel": "guild",
+    "Source": "Abram"
+   },
+   {
+    "Time": "2020-12-01T18:37:53-06:00",
+    "Message": "Person tells the guild, 'send tells to tyrus for raid invites'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-01T18:46:21-06:00",
+    "Message": "Penelo tells you, 'yeah, we are'",
+    "Channel": "tell",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T18:46:26-06:00",
+    "Message": "Penelo tells you, 'just gonna have to pull south wall now'",
+    "Channel": "tell",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T18:53:09-06:00",
+    "Message": "Voltha tells the guild, 'play a game, It will relax you they said... '",
+    "Channel": "guild",
+    "Source": "Voltha"
+   },
+   {
+    "Time": "2020-12-01T18:56:18-06:00",
+    "Message": "Tyrus tells you, 'can i get DMF plz'",
+    "Channel": "tell",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T18:56:24-06:00",
+    "Message": "Scylla tells the guild, 'Can anyone port?'",
+    "Channel": "guild",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-01T18:56:40-06:00",
+    "Message": "Snwo tells the guild, 'druids, wizards'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T18:56:44-06:00",
+    "Message": "Snwo tells the guild, ':P'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T18:57:26-06:00",
+    "Message": "Xarielx tells the guild, 'silvervvolf is in cl if you need a port'",
+    "Channel": "guild",
+    "Source": "Xarielx"
+   },
+   {
+    "Time": "2020-12-01T18:58:46-06:00",
+    "Message": "Abram tells you, 'can u summon my corpse i died in the center i got summoned'",
+    "Channel": "tell",
+    "Source": "Abram"
+   },
+   {
+    "Time": "2020-12-01T18:59:01-06:00",
+    "Message": "Olivercromwell tells the guild, 'So DBG sells EQ!! Yay!'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T18:59:44-06:00",
+    "Message": "Snwo tells the guild, 'yeah, might end up being a good thing'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T19:00:53-06:00",
+    "Message": "Tyrus tells you, 'abram isn't in raid, one sec'",
+    "Channel": "tell",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T19:01:00-06:00",
+    "Message": "Abram tells you, 'idk if im in the raid i crashed and it says im in the raid in the window but i havent seen any text'",
+    "Channel": "tell",
+    "Source": "Abram"
+   },
+   {
+    "Time": "2020-12-01T19:01:16-06:00",
+    "Message": "Abram tells you, 'yeah he had to invite me again'",
+    "Channel": "tell",
+    "Source": "Abram"
+   },
+   {
+    "Time": "2020-12-01T19:01:20-06:00",
+    "Message": "Bipp tells you, 'ok AoN gonna drop every mini'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:01:56-06:00",
+    "Message": "Abram tells you, 'kk ty'",
+    "Channel": "tell",
+    "Source": "Abram"
+   },
+   {
+    "Time": "2020-12-01T19:02:26-06:00",
+    "Message": "Penelo tells you, 'be on the lookout for a solo draco'",
+    "Channel": "tell",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T19:05:17-06:00",
+    "Message": "Xarielx tells the guild, 'Netted Kelp Tunic\u003e Carmine Robe thank  you'",
+    "Channel": "guild",
+    "Source": "Xarielx"
+   },
+   {
+    "Time": "2020-12-01T19:05:28-06:00",
+    "Message": "Olivercromwell tells the guild, 'word, grats'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T19:05:33-06:00",
+    "Message": "Bipp tells the guild, '$$$$'",
+    "Channel": "guild",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:05:49-06:00",
+    "Message": "Snwo tells the guild, 'grats!'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T19:08:15-06:00",
+    "Message": "Ravnor tells the guild, 'A dracoliche in 219s, 330k @1506 | Penelo 24705 | Wallen 24661 | Ravnor 24253 | Person 23186 | Boogabooga 20887 | Tyrus 17869 | Abram 17806 | Yzzy 17578 | Coltaine 16809 | Talen 16424 | A shiverback 14547 | Destrod 13997 | Mortimus 11227 {X} | Bramil 11189 | Sacristan 10287'",
+    "Channel": "guild",
+    "Source": "Ravnor"
+   },
+   {
+    "Time": "2020-12-01T19:08:40-06:00",
+    "Message": "Ravnor tells the guild, 'A dracoliche in 219s, 51437 AH | A dracoliche 23345 AH | Olivercromwell 12537 AH | Solaryn 9216 AH | Scylla 8975 AH | Banis 5744 AH | Iilenye 3501 AH | Voltha 3301 AH | Kaijin 2820 AH | Porrt 2210 AH | Coltaine 1433 AH | Clearwater 1044 AH | Sacristan 525 AH | Mortimus 131 AH'",
+    "Channel": "guild",
+    "Source": "Ravnor"
+   },
+   {
+    "Time": "2020-12-01T19:08:55-06:00",
+    "Message": "Snwo tells the guild, 'ravnor slacking?!'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T19:10:00-06:00",
+    "Message": "Bipp tells you, 'lol beast'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:10:44-06:00",
+    "Message": "Bipp tells you, 'giving you haste and atk, BIG COMBOZ'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:12:44-06:00",
+    "Message": "Penelo tells the guild, 'restarted his pc'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T19:17:34-06:00",
+    "Message": "Krotax tells the guild, 'im down'",
+    "Channel": "guild",
+    "Source": "Krotax"
+   },
+   {
+    "Time": "2020-12-01T19:18:38-06:00",
+    "Message": "Krotax tells the guild, 'i need a res'",
+    "Channel": "guild",
+    "Source": "Krotax"
+   },
+   {
+    "Time": "2020-12-01T19:18:42-06:00",
+    "Message": "Zortax tells you, 'does it ?'",
+    "Channel": "tell",
+    "Source": "Zortax"
+   },
+   {
+    "Time": "2020-12-01T19:22:13-06:00",
+    "Message": "Bipp tells you, 'does cazic AE now? i forget'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:22:46-06:00",
+    "Message": "Bipp tells you, 'does it do dmg?'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:22:53-06:00",
+    "Message": "Bipp tells you, 'hm okay'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:22:58-06:00",
+    "Message": "Bipp tells you, 'ill run magic resist'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:23:52-06:00",
+    "Message": "Bipp tells you, 'lol the beat stick'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:23:54-06:00",
+    "Message": "Bipp tells you, 'im pretty okay with it'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:24:01-06:00",
+    "Message": "Zortax tells you, 'dmf pls'",
+    "Channel": "tell",
+    "Source": "Zortax"
+   },
+   {
+    "Time": "2020-12-01T19:24:14-06:00",
+    "Message": "Bipp tells you, 'though appearance can prob make it look like something necro shouldn't have'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:24:15-06:00",
+    "Message": "Sinidan tells the guild, 'someone fucking trained me outside of kael when i logged in'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T19:24:23-06:00",
+    "Message": "Talen tells the guild, 'well sob'",
+    "Channel": "guild",
+    "Source": "Talen"
+   },
+   {
+    "Time": "2020-12-01T19:24:27-06:00",
+    "Message": "Olivercromwell tells the guild, 'Those bastards'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T19:24:31-06:00",
+    "Message": "Tyrus tells the guild, 'F'",
+    "Channel": "guild",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T19:24:34-06:00",
+    "Message": "Person tells the guild, 'wtf'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-01T19:24:37-06:00",
+    "Message": "Fenbus tells the guild, 'so 59 again?'",
+    "Channel": "guild",
+    "Source": "Fenbus"
+   },
+   {
+    "Time": "2020-12-01T19:24:39-06:00",
+    "Message": "Snwo tells the guild, 'are you blue again?'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T19:24:47-06:00",
+    "Message": "Person tells the guild, 'you can camp sneak/hide btw'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-01T19:24:48-06:00",
+    "Message": "Sacristan tells the guild, 'it was planned'",
+    "Channel": "guild",
+    "Source": "Sacristan"
+   },
+   {
+    "Time": "2020-12-01T19:25:04-06:00",
+    "Message": "Snwo tells the guild, 'wonder if I can beat you to 60'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T19:25:36-06:00",
+    "Message": "Tyrus tells you, 'can i get DMF on me and kaijin plz'",
+    "Channel": "tell",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T19:25:42-06:00",
+    "Message": "Sinidan tells the guild, 'im still 60'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T19:25:52-06:00",
+    "Message": "Snwo tells the guild, ':P'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T19:26:09-06:00",
+    "Message": "Sinidan tells the guild, 'can anyone rez me just west of the AoC in EW'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T19:26:26-06:00",
+    "Message": "Tyrus tells you, 'sounds good'",
+    "Channel": "tell",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T19:27:30-06:00",
+    "Message": "Ayamnivay tells the guild, 'Dark blue forever'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T19:27:32-06:00",
+    "Message": "Sinidan tells the guild, 'please'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T19:27:38-06:00",
+    "Message": "Sinidan tells the guild, 'i am still 60'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T19:28:14-06:00",
+    "Message": "Ayamnivay tells the guild, 'Need more CoTH surprises'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T19:36:59-06:00",
+    "Message": "Sinidan tells the guild, 'gratz'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T19:37:06-06:00",
+    "Message": "Tyrus tells the guild, 'gratz!'",
+    "Channel": "guild",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T19:37:32-06:00",
+    "Message": "Ayamnivay tells the guild, 'Gratx!'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T19:37:55-06:00",
+    "Message": "Bipp tells you, 'check now'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:38:05-06:00",
+    "Message": "Bipp tells you, 'should bump you up'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:38:43-06:00",
+    "Message": "Bipp tells you, 'yea thats highest ive seen'",
+    "Channel": "tell",
+    "Source": "Bipp"
+   },
+   {
+    "Time": "2020-12-01T19:41:04-06:00",
+    "Message": "Person tells the guild, 'is someone giving Sin a rez?'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-01T19:41:16-06:00",
+    "Message": "Penelo tells you, 'trying but fen too busy playing with glare lords'",
+    "Channel": "tell",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T19:41:17-06:00",
+    "Message": "Snwo tells the guild, 'guild policy, no xp back for Sin'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T19:41:21-06:00",
+    "Message": "Person tells the guild, 'you know how long it took Pen to get him that exp'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-01T19:42:32-06:00",
+    "Message": "Person tells the guild, 'but if someone could rez him i would be greatful, even parcel ya some coin'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-01T19:42:38-06:00",
+    "Message": "Snwo tells the guild, 'okay, night guys, gonna hit the night out early'",
+    "Channel": "guild",
+    "Source": "Snwo"
+   },
+   {
+    "Time": "2020-12-01T19:42:47-06:00",
+    "Message": "Ayamnivay tells the guild, 'Laters Snwo!'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T19:42:58-06:00",
+    "Message": "Person tells the guild, 'later Snwo'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-01T19:46:51-06:00",
+    "Message": "Sinidan tells the guild, 'no rez yet'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T19:47:00-06:00",
+    "Message": "Person tells the guild, '):'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-01T19:47:26-06:00",
+    "Message": "Person tells the guild, 'did you try going inside kael and asking. normally a bunch there'",
+    "Channel": "guild",
+    "Source": "Person"
+   },
+   {
+    "Time": "2020-12-01T19:47:36-06:00",
+    "Message": "Foamy tells the guild, 'LOL i'll port scylla to wl all ninja like with sol'",
+    "Channel": "guild",
+    "Source": "Foamy"
+   },
+   {
+    "Time": "2020-12-01T19:48:35-06:00",
+    "Message": "Scylla tells the guild, 'Yeah you can port me after CT?'",
+    "Channel": "guild",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-01T19:50:15-06:00",
+    "Message": "Baglunch tells the guild, 'any officers on'",
+    "Channel": "guild",
+    "Source": "Baglunch"
+   },
+   {
+    "Time": "2020-12-01T19:50:30-06:00",
+    "Message": "Sinidan tells the guild, 'a bunch'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T19:50:55-06:00",
+    "Message": "Baglunch tells the guild, 'wufang is interested in a possible guild tag - hes level 54'",
+    "Channel": "guild",
+    "Source": "Baglunch"
+   },
+   {
+    "Time": "2020-12-01T19:56:35-06:00",
+    "Message": "Sinidan tells the guild, 'thanks Bag, talking to him now'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T19:56:43-06:00",
+    "Message": "Baglunch tells the guild, 'awesome okay'",
+    "Channel": "guild",
+    "Source": "Baglunch"
+   },
+   {
+    "Time": "2020-12-01T20:07:26-06:00",
+    "Message": "Penelo tells the guild, 'Halo of the Enlightened//Bile Etched Obsidian Choker//2xEye of Cazic-Thule'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T20:07:38-06:00",
+    "Message": "Penelo tells the guild, '2 AoNs, 2 boxes, pretty good nite'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T20:07:45-06:00",
+    "Message": "Ayamnivay tells the guild, 'Yep!'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T20:08:11-06:00",
+    "Message": "Scylla tells the guild, 'Gross, bile -etched'",
+    "Channel": "guild",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-01T20:08:51-06:00",
+    "Message": "Ravnor tells the guild, 'Cazic-Thule in 963s, 908k @942 | Ravnor 104k | Wallen 84008 | Yzzy 74305 | Person 69632 | Penelo 67245 | Boogabooga 56318 {HX} | Tyrus 51605 {XX} | Destrod 45593 {X} | Sacristan 31357 {X} | Mortimus 30884 {X} | Abram 29260 | Bramil 27761 | Denia 25114 {X} | Gausbert 23288 | Bipp 22571'",
+    "Channel": "guild",
+    "Source": "Ravnor"
+   },
+   {
+    "Time": "2020-12-01T20:09:02-06:00",
+    "Message": "Ravnor tells the guild, 'Cazic-Thule in 963s, 356k AH | Olivercromwell 57846 AH | Voltha 51291 AH | Scylla 33250 AH | Kaijin 33084 AH | Milliardo 21722 AH | Bunzz 20864 AH | Sacristan 18013 AH | Clearwater 16144 AH | Banis 15756 AH | Iilenye 14828 AH | Silvaefar 14043 AH | Solaryn 13846 AH | Porrt 8749 AH | Zortax 8312 AH | Cazic-Thule 5693 AH'",
+    "Channel": "guild",
+    "Source": "Ravnor"
+   },
+   {
+    "Time": "2020-12-01T20:10:52-06:00",
+    "Message": "Scylla tells the guild, 'Tells to me for this disgusting item: Bile Etched Obsidian Choker that someone threw up on'",
+    "Channel": "guild",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-01T20:11:04-06:00",
+    "Message": "Talen tells the guild, 'grats'",
+    "Channel": "guild",
+    "Source": "Talen"
+   },
+   {
+    "Time": "2020-12-01T20:11:13-06:00",
+    "Message": "Sinidan tells the guild, 'gratz'",
+    "Channel": "guild",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T20:11:20-06:00",
+    "Message": "Baglunch tells the guild, 'thank you'",
+    "Channel": "guild",
+    "Source": "Baglunch"
+   },
+   {
+    "Time": "2020-12-01T20:11:47-06:00",
+    "Message": "Sinidan tells you, 'nope lol'",
+    "Channel": "tell",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T20:12:02-06:00",
+    "Message": "Splintered tells the guild, 'Gratz'",
+    "Channel": "guild",
+    "Source": "Splintered"
+   },
+   {
+    "Time": "2020-12-01T20:12:21-06:00",
+    "Message": "Sinidan tells you, 'right by the AoC to Kael'",
+    "Channel": "tell",
+    "Source": "Sinidan"
+   },
+   {
+    "Time": "2020-12-01T20:13:02-06:00",
+    "Message": "Scylla tells the guild, 'Tells to me for this disgusting item: Bile Etched Obsidian Choker that someone threw up on 1 min left'",
+    "Channel": "guild",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-01T20:13:33-06:00",
+    "Message": "Ravnor tells the guild, 'bias ^^^^'",
+    "Channel": "guild",
+    "Source": "Ravnor"
+   },
+   {
+    "Time": "2020-12-01T20:14:01-06:00",
+    "Message": "Coltaine tells the guild, 'scylla suffers noobs'",
+    "Channel": "guild",
+    "Source": "Coltaine"
+   },
+   {
+    "Time": "2020-12-01T20:14:27-06:00",
+    "Message": "Scylla tells the guild, 'Tells to me for this disgusting item: Bile Etched Obsidian Choker that someone threw up on LAST CALL'",
+    "Channel": "guild",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-01T20:15:02-06:00",
+    "Message": "Scylla tells the guild, 'Tells to me for this disgusting item: Bile Etched Obsidian Choker that someone threw up on CLOSED'",
+    "Channel": "guild",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-01T20:16:14-06:00",
+    "Message": "Coltaine tells the guild, 'cheers mates'",
+    "Channel": "guild",
+    "Source": "Coltaine"
+   },
+   {
+    "Time": "2020-12-01T20:16:48-06:00",
+    "Message": "Scylla tells the guild, 'Congrats Penelo to win the vomited-on Bile Etched Obsidian Choker for 500 DKP'",
+    "Channel": "guild",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-01T20:17:00-06:00",
+    "Message": "Ayamnivay tells the guild, 'Woot!'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T20:19:32-06:00",
+    "Message": "Penelo tells the guild, 'thanks  :)'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T20:20:37-06:00",
+    "Message": "Ayamnivay tells the guild, 'Gratx!'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T20:21:07-06:00",
+    "Message": "Ravnor tells you, 'grats meng'",
+    "Channel": "tell",
+    "Source": "Ravnor"
+   },
+   {
+    "Time": "2020-12-01T20:21:11-06:00",
+    "Message": "Penelo tells the guild, 'Eye of Cazic-Thule Grats Silvaefar and Mortimus, bid 1705 and 1200, both win for 1185'",
+    "Channel": "guild",
+    "Source": "Penelo"
+   },
+   {
+    "Time": "2020-12-01T20:21:47-06:00",
+    "Message": "Destrod tells you, 'I tried *shrug*'",
+    "Channel": "tell",
+    "Source": "Destrod"
+   },
+   {
+    "Time": "2020-12-01T20:21:55-06:00",
+    "Message": "Scylla tells you, 'Halo of the Enlightened DKP bit of 605, main'",
+    "Channel": "tell",
+    "Source": "Scylla"
+   },
+   {
+    "Time": "2020-12-01T20:22:01-06:00",
+    "Message": "Olivercromwell tells you, 'bid main 650'",
+    "Channel": "tell",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T20:22:07-06:00",
+    "Message": "You say to your guild, 'Halo of the Enlightened bids to Mortimus, pst'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-01T20:22:20-06:00",
+    "Message": "Tyrus tells you, '300 second main (kaijin'",
+    "Channel": "tell",
+    "Source": "Tyrus"
+   },
+   {
+    "Time": "2020-12-01T20:23:03-06:00",
+    "Message": "You say to your guild, 'Halo of the Enlightened bids to Mortimus, pst 1min'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-01T20:23:36-06:00",
+    "Message": "You say to your guild, 'Halo of the Enlightened bids to Mortimus, pst 30s'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-01T20:24:02-06:00",
+    "Message": "You say to your guild, 'Halo of the Enlightened bids to Mortimus, CLOSED Gratz Olivercromwell for 610dkp'",
+    "Channel": "guild",
+    "Source": "You"
+   },
+   {
+    "Time": "2020-12-01T20:24:59-06:00",
+    "Message": "Ayamnivay tells the guild, 'Gratx!'",
+    "Channel": "guild",
+    "Source": "Ayamnivay"
+   },
+   {
+    "Time": "2020-12-01T20:25:06-06:00",
+    "Message": "Topmarine tells the guild, 'grats'",
+    "Channel": "guild",
+    "Source": "Topmarine"
+   },
+   {
+    "Time": "2020-12-01T20:25:09-06:00",
+    "Message": "Olivercromwell tells the guild, 'ty!'",
+    "Channel": "guild",
+    "Source": "Olivercromwell"
+   },
+   {
+    "Time": "2020-12-01T20:25:22-06:00",
+    "Message": "Scylla tells the guild, 'Gratz!'",
+    "Channel": "guild",
+    "Source": "Scylla"
+   }
+  ]
+ }
+}
