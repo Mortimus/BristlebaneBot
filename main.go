@@ -67,7 +67,8 @@ func main() {
 }
 
 func reactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
-	if m.Emoji.ID == configuration.InvestigationStartEmoji {
+	fmt.Printf("Reaction Added! Emoji: %s MessageID: %s", m.Emoji.ID, m.MessageID)
+	if m.Emoji.ID == configuration.InvestigationStartEmoji && isArchive(m.MessageID) {
 		for _, archiveID := range archives {
 			if m.MessageID == archiveID {
 				uploadArchive("archive\\" + archiveID + ".json")
@@ -371,21 +372,25 @@ func (b *BidItem) closeBid() {
 	// author.Name = sig.String()
 	// var provider discordgo.MessageEmbedProvider
 	// provider.Name = sig.String()
-	// var footer discordgo.MessageEmbedFooter
-	// footer.Text = "Mortimus" // TODO: Pull this from the log being monitored
-	// footer.IconURL = configuration.DiscordLootIcon
+	var footer discordgo.MessageEmbedFooter
+	footer.Text = "Mortimus" // TODO: Pull this from the log being monitored
+	footer.IconURL = configuration.DiscordLootIcon
 
 	embed := discordgo.MessageEmbed{
 		URL:    b.URL,
 		Title:  fmt.Sprintf("%s", b.Item),
 		Type:   discordgo.EmbedTypeRich,
 		Fields: fields,
-		// Footer: &footer,
+		Footer: &footer,
 	}
 	dMsg, err := discord.ChannelMessageSendEmbed(configuration.LootChannelID, &embed)
 	// _, err := discord.ChannelMessageSend(configuration.LootChannelID, response)
 	if err != nil {
 		l.ErrorF("Error sending discord message: %s", err.Error())
+	}
+	err = discord.MessageReactionAdd(configuration.LootChannelID, dMsg.ChannelID, configuration.InvestigationStartEmoji)
+	if err != nil {
+		l.ErrorF("Error adding base reaction: %s", err.Error())
 	}
 	b.InvestigationLogs = investigation
 	// Write bid to archive
@@ -511,7 +516,7 @@ func writeArchive(name string, data BidItem) {
 		l.ErrorF("Error converting to JSON: %s", err.Error())
 	}
 
-	err = ioutil.WriteFile("archive\\"+name+".json", file, 0644)
+	err = ioutil.WriteFile("archive/"+name+".json", file, 0644)
 	if err != nil {
 		l.ErrorF("Error writing archive to file: %s", err.Error())
 	}
@@ -542,7 +547,7 @@ func getTime() time.Time {
 func uploadArchive(id string) {
 	l := LogInit("uploadArchive-main.go")
 	defer l.End()
-	file, err := os.Open("archive\\" + id + ".json") // TODO: Account for linux, and maliciousness
+	file, err := os.Open("archive/" + id + ".json") // TODO: Account for linux, and maliciousness
 	if err != nil {
 		l.ErrorF("Error finding archive: %s", err.Error())
 		discord.ChannelMessageSend(configuration.InvestigationChannelID, "Error uploading investigation: "+id)
@@ -570,4 +575,13 @@ func getArchiveList() []string { // TODO: get directory listing on archives
 		l.ErrorF("Error reading archives: %s", err.Error())
 	}
 	return files
+}
+
+func isArchive(id string) bool {
+	for _, arc := range archives {
+		if arc == id {
+			return true
+		}
+	}
+	return false
 }
