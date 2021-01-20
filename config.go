@@ -31,6 +31,8 @@ type Configuration struct {
 	InvestigationChannelID       string `json:"InvestigationChannelID"`       // Channel ID on where to send archive json files for investigation
 	InvestigationLogLimitMinutes int    `json:"InvestigationLogLimitMinutes"` // How many tells to append to archives for investigation
 	DiscordLootIcon              string `json:"DiscordLootIcon"`              // Icon to show for discord rich message
+	InvestigationStartEmoji      string `json:"InvestigationStartEmoji"`      // Emoji required to start an investigation
+	InvestigationStartMinReq     string `json:"InvestigationStartMinReq"`     // Amount of emoji required from priv users to start an investigation
 }
 
 func init() {

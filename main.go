@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -17,7 +18,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/google/uuid"
 )
 
 var bidLock sync.Mutex
@@ -26,6 +26,7 @@ var itemDB map[string]int
 var discord *discordgo.Session
 var investigation Investigation
 var currentTime time.Time // for simulating time
+var archives []string     // stores all known archive files for recall
 
 func main() {
 	// Open Configuration and set log output
@@ -48,10 +49,12 @@ func main() {
 	}
 	defer discord.Close()
 	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
+	// uploadArchive("1ad7487f-e1d4-4b15-ba52-100ac34a245e")
 	bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
 
 	// // Register the messageCreate func as a callback for MessageCreate events.
 	// dg.AddHandler(messageCreate)
+	discord.AddHandler(reactionAdd)
 
 	// daemon.SdNotify(false, "READY=1")
 
@@ -61,6 +64,16 @@ func main() {
 	// sc := make(chan os.Signal, 1)
 	// signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	// <-sc
+}
+
+func reactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
+	if m.Emoji.ID == configuration.InvestigationStartEmoji {
+		for _, archiveID := range archives {
+			if m.MessageID == archiveID {
+				uploadArchive("archive\\" + archiveID + ".json")
+			}
+		}
+	}
 }
 
 func bufferedRead(path string, fromStart bool) {
@@ -284,7 +297,7 @@ func (b *BidItem) startBid() {
 	b.Start = getTime()
 	b.End = b.Start.Add(time.Duration(time.Duration(configuration.BidTimerMinutes) * time.Minute))
 	// time.NewTimer(3 * time.Minute)
-	_, err := discord.ChannelMessageSend(configuration.LootChannelID, fmt.Sprintf("Bids open on %s x(%d) for %d minutes", b.Item, b.Count, configuration.BidTimerMinutes))
+	_, err := discord.ChannelMessageSend(configuration.LootChannelID, fmt.Sprintf("Bids open on %s x%d for %d minutes", b.Item, b.Count, configuration.BidTimerMinutes))
 	if err != nil {
 		l.ErrorF("Failed to open bid: %s", err.Error())
 	}
@@ -332,7 +345,7 @@ func (b *BidItem) bidderExists(user string) int {
 func (b *BidItem) closeBid() {
 	l := LogInit("closeBid-main.go")
 	defer l.End()
-	sig := uuid.New()
+	// sig := uuid.New()
 	l.InfoF("Bid ended for : %s x%d", b.Item, b.Count)
 	// Handle Bid winnner
 	response := fmt.Sprintf("Winner(s) of %s (%s) x%d", b.Item, b.URL, b.Count)
@@ -345,7 +358,7 @@ func (b *BidItem) closeBid() {
 			response = fmt.Sprintf("%s for %d is %s", response, winner.Amount, winner.Name)
 		}
 	}
-	response = fmt.Sprintf("%s\n[%s]", response, sig)
+	response = fmt.Sprintf("%s\n[%s]", response, "Mortimus") // TODO: Pull this name from the log being monitored
 	l.InfoF(response)
 	var fields []*discordgo.MessageEmbedField
 	for _, winner := range b.getWinners(b.Count) {
@@ -358,25 +371,25 @@ func (b *BidItem) closeBid() {
 	// author.Name = sig.String()
 	// var provider discordgo.MessageEmbedProvider
 	// provider.Name = sig.String()
-	var footer discordgo.MessageEmbedFooter
-	footer.Text = sig.String()
-	footer.IconURL = configuration.DiscordLootIcon
+	// var footer discordgo.MessageEmbedFooter
+	// footer.Text = "Mortimus" // TODO: Pull this from the log being monitored
+	// footer.IconURL = configuration.DiscordLootIcon
 
 	embed := discordgo.MessageEmbed{
 		URL:    b.URL,
 		Title:  fmt.Sprintf("%s", b.Item),
 		Type:   discordgo.EmbedTypeRich,
 		Fields: fields,
-		Footer: &footer,
+		// Footer: &footer,
 	}
-	_, err := discord.ChannelMessageSendEmbed(configuration.LootChannelID, &embed)
+	dMsg, err := discord.ChannelMessageSendEmbed(configuration.LootChannelID, &embed)
 	// _, err := discord.ChannelMessageSend(configuration.LootChannelID, response)
 	if err != nil {
 		l.ErrorF("Error sending discord message: %s", err.Error())
 	}
 	b.InvestigationLogs = investigation
 	// Write bid to archive
-	writeArchive(sig.String(), *b)
+	writeArchive(dMsg.ID, *b)
 }
 
 // Winner is the user who won items
@@ -502,6 +515,7 @@ func writeArchive(name string, data BidItem) {
 	if err != nil {
 		l.ErrorF("Error writing archive to file: %s", err.Error())
 	}
+	archives = append(archives, name) // add to known archive
 }
 
 // Investigation is raw logs during a specified time-frame for verifying failed bids
@@ -523,4 +537,37 @@ func getTime() time.Time {
 		return currentTime
 	}
 	return time.Now()
+}
+
+func uploadArchive(id string) {
+	l := LogInit("uploadArchive-main.go")
+	defer l.End()
+	file, err := os.Open("archive\\" + id + ".json") // TODO: Account for linux, and maliciousness
+	if err != nil {
+		l.ErrorF("Error finding archive: %s", err.Error())
+		discord.ChannelMessageSend(configuration.InvestigationChannelID, "Error uploading investigation: "+id)
+	} else {
+		discord.ChannelFileSend(configuration.InvestigationChannelID, id+".json", file)
+	}
+}
+
+func checkReactions() {
+	discord.MessageReactions(configuration.LootChannelID, "801309136020570154", ":mag_right:", 100, "", "")
+}
+
+func getArchiveList() []string { // TODO: get directory listing on archives
+	l := LogInit("getArchiveList-main.go")
+	defer l.End()
+	var files []string
+
+	root := "./archive"
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		name := strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
+		files = append(files, name)
+		return nil
+	})
+	if err != nil {
+		l.ErrorF("Error reading archives: %s", err.Error())
+	}
+	return files
 }
