@@ -29,6 +29,7 @@ var discord *discordgo.Session
 var investigation Investigation
 var currentTime time.Time // for simulating time
 var archives []string     // stores all known archive files for recall
+var roster map[string]Player
 
 func main() {
 	// Open Configuration and set log output
@@ -628,7 +629,7 @@ func loadRoster(file string) {
 	//r := csv.NewReader(bufio.NewReader(csvfile))
 
 	// Iterate through the records
-	headerSkipped := false
+	headerSkipped := true // guild dumps have no header
 	for {
 		// Read each record from csv
 		record, err := r.Read()
@@ -643,13 +644,27 @@ func loadRoster(file string) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		var player Player
+		player.Name = record[0]
 		// fmt.Printf("ID: %s Name: %s\n", record[0], record[1])
-		itemID, err := strconv.Atoi(record[0])
+		player.Level, err = strconv.Atoi(record[1])
 		if err != nil {
 			log.Fatal(err)
 		}
-		itemDB[record[1]] = itemID
+		player.Class = record[2]
+		if record[4] == "A" {
+			player.Alt = true
+		} // defaults to false
+		roster[record[0]] = player
 	}
 }
 
 // Player is represented by Name, Level, Class, Rank, Alt, Last On, Zone, Note, Tribute Status, Unk_1, Unk_2, Last Donation, Private Note
+type Player struct {
+	Name  string `json:"Name"`
+	Level int    `json:"Level"`
+	Class string `json:"Class"`
+	Rank  string `json:"Rank"` // this is a meta field, its not direct from the rank column
+	Alt   bool   `json:"Alt"`
+	DKP   int    `json:"DKP"` // this is filled in post from google sheets
+}
