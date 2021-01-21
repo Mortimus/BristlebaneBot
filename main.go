@@ -9,12 +9,14 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -40,6 +42,7 @@ func main() {
 	defer l.End()
 
 	loadItemDB(configuration.LucyItems)
+	archives = getArchiveList()
 	// bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
 
 	// Create a new Discord session using the provided bot token.
@@ -48,33 +51,57 @@ func main() {
 		l.FatalF("Error creating Discord session: %v", err)
 	}
 	defer discord.Close()
-	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
+	// discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 	// uploadArchive("1ad7487f-e1d4-4b15-ba52-100ac34a245e")
-	bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
+	// go bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
 
 	// // Register the messageCreate func as a callback for MessageCreate events.
 	// dg.AddHandler(messageCreate)
 	discord.AddHandler(reactionAdd)
 
+	// Open a websocket connection to Discord and begin listening.
+	err = discord.Open()
+	if err != nil {
+		l.FatalF("Error opening connection with Discord: %v", err)
+		return
+	}
+
 	// daemon.SdNotify(false, "READY=1")
 
 	// Wait here until CTRL-C or other term signal is received.
-	// fmt.Println("Bot is now running.  Press CTRL-C to exit.")
-	// l.InfoF("Bot is now running")
-	// sc := make(chan os.Signal, 1)
-	// signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
-	// <-sc
+	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
+	l.InfoF("Bot is now running")
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	<-sc
 }
 
 func reactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
-	fmt.Printf("Reaction Added! Emoji: %s MessageID: %s", m.Emoji.ID, m.MessageID)
-	if m.Emoji.ID == configuration.InvestigationStartEmoji && isArchive(m.MessageID) {
-		for _, archiveID := range archives {
-			if m.MessageID == archiveID {
-				uploadArchive("archive\\" + archiveID + ".json")
-			}
+	l := LogInit("reactionAdd-main.go")
+	defer l.End()
+	// fmt.Printf("Reaction Added! Emoji: %#+v MessageID: %s\n", m.Emoji, m.MessageID)
+	// fmt.Printf("isEmoji: %t isArchive: %t\n", isEmoji, isArchive(m.MessageID))
+	if m.Emoji.Name == configuration.InvestigationStartEmoji && getReactions(m.MessageID, configuration.InvestigationStartEmoji) >= configuration.InvestigationStartMinReq && isArchive(m.MessageID) {
+		// fmt.Printf("Investigating!\n")
+		uploadArchive(m.MessageID)
+	}
+}
+
+func getReactions(messageID string, emoji string) int {
+	l := LogInit("getReactions-main.go")
+	defer l.End()
+	msg, err := discord.ChannelMessage(configuration.LootChannelID, messageID)
+	if err != nil {
+		l.ErrorF("Error getting message: %s", err.Error())
+		return -1
+	}
+	for _, react := range msg.Reactions {
+		if react.Emoji.Name == emoji {
+			return react.Count
 		}
 	}
+	l.ErrorF("Cannot find emoji")
+	return -1 // Emoji not found
 }
 
 func bufferedRead(path string, fromStart bool) {
@@ -584,4 +611,43 @@ func isArchive(id string) bool {
 		}
 	}
 	return false
+}
+
+func loadRoster(file string) {
+	l := LogInit("loadItemDB-main.go")
+	defer l.End()
+	csvfile, err := os.Open(file)
+	if err != nil {
+		log.Fatalln("Couldn't open the csv file", err)
+	}
+	defer csvfile.Close()
+	itemDB = make(map[string]int)
+
+	// Parse the file
+	r := csv.NewReader(csvfile)
+	//r := csv.NewReader(bufio.NewReader(csvfile))
+
+	// Iterate through the records
+	headerSkipped := false
+	for {
+		// Read each record from csv
+		record, err := r.Read()
+		if !headerSkipped {
+			headerSkipped = true
+			// skip header line
+			continue
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		// fmt.Printf("ID: %s Name: %s\n", record[0], record[1])
+		itemID, err := strconv.Atoi(record[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		itemDB[record[1]] = itemID
+	}
 }

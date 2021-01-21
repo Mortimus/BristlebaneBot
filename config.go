@@ -32,7 +32,8 @@ type Configuration struct {
 	InvestigationLogLimitMinutes int    `json:"InvestigationLogLimitMinutes"` // How many tells to append to archives for investigation
 	DiscordLootIcon              string `json:"DiscordLootIcon"`              // Icon to show for discord rich message
 	InvestigationStartEmoji      string `json:"InvestigationStartEmoji"`      // Emoji required to start an investigation
-	InvestigationStartMinReq     string `json:"InvestigationStartMinReq"`     // Amount of emoji required from priv users to start an investigation
+	InvestigationStartMinReq     int    `json:"InvestigationStartMinReq"`     // Amount of emoji required from priv users to start an investigation
+	GuildRosterPath              string `json:"GuildRosterPath"`              // Path to the guild name_server-timestamp.txt guild dump including alts and offline
 }
 
 func init() {
