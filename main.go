@@ -614,7 +614,7 @@ func isArchive(id string) bool {
 }
 
 func loadRoster(file string) {
-	l := LogInit("loadItemDB-main.go")
+	l := LogInit("loadRoster-main.go")
 	defer l.End()
 	csvfile, err := os.Open(file)
 	if err != nil {
@@ -651,3 +651,5 @@ func loadRoster(file string) {
 		itemDB[record[1]] = itemID
 	}
 }
+
+// Player is represented by Name, Level, Class, Rank, Alt, Last On, Zone, Note, Tribute Status, Unk_1, Unk_2, Last Donation, Private Note
