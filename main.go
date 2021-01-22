@@ -2,12 +2,14 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -20,16 +22,119 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/sheets/v4"
 )
 
 var bidLock sync.Mutex
 var bids = map[string]*BidItem{}
 var itemDB map[string]int
+var itemLock sync.Mutex
 var discord *discordgo.Session
 var investigation Investigation
 var currentTime time.Time // for simulating time
 var archives []string     // stores all known archive files for recall
-var roster map[string]Player
+var roster = map[string]*Player{}
+var rosterLock sync.Mutex
+
+// srv is the global to connect to google sheets
+var srv *sheets.Service
+
+// Retrieve a token, saves the token, then returns the generated client.
+func getClient(config *oauth2.Config) *http.Client {
+	l := LogInit("getClient-main.go")
+	defer l.End()
+	// The file token.json stores the user's access and refresh tokens, and is
+	// created automatically when the authorization flow completes for the first
+	// time.
+	// tokFile := "token.json"
+	l.InfoF("Fake loading token from file")
+	tok, err := tokenFromFile("")
+	if err != nil {
+		l.InfoF("Token failed to load, loading from web")
+		tok = getTokenFromWeb(config)
+		l.InfoF("Saving token")
+		saveToken("", tok)
+	}
+	l.DebugF("Using Token: %+v", tok)
+	return config.Client(context.Background(), tok)
+}
+
+// Request a token from the web, then returns the retrieved token.
+func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
+	l := LogInit("getTokenFromWeb-main.go")
+	defer l.End()
+	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	fmt.Printf("Go to the following link in your browser then type the "+
+		"authorization code: \n%v\n", authURL)
+	l.InfoF("Requesting user navigate to: %s", authURL)
+	var authCode string
+	if _, err := fmt.Scan(&authCode); err != nil {
+		l.FatalF("Unable to read authorization code: %v", err)
+	}
+
+	tok, err := config.Exchange(context.TODO(), authCode)
+	if err != nil {
+		l.FatalF("Unable to retrieve token from web: %v", err)
+	}
+	l.InfoF("Return token: %+v", tok)
+	return tok
+}
+
+// Retrieves a token from a local file.
+func tokenFromFile(file string) (*oauth2.Token, error) {
+	l := LogInit("tokenFromFile-main.go")
+	defer l.End()
+	// f, err := os.Open(file)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer f.Close()
+	tok := &oauth2.Token{}
+	tok.AccessToken = configuration.AccessToken
+	tok.Expiry = configuration.Expiry
+	tok.RefreshToken = configuration.RefreshToken
+	tok.TokenType = configuration.TokenType
+	// err = json.NewDecoder(f).Decode(tok)
+	l.InfoF("Returning token: %+v", tok)
+	return tok, nil
+}
+
+// Saves a token to a file path.
+func saveToken(path string, token *oauth2.Token) {
+	l := LogInit("saveToken-main.go")
+	defer l.End()
+	// fmt.Printf("Saving credential file to: %s\n", path)
+	// f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	// if err != nil {
+	// 	log.Fatalf("Unable to cache oauth token: %v", err)
+	// }
+	// defer f.Close()
+	// json.NewEncoder(f).Encode(token)
+	configuration.AccessToken = token.AccessToken
+	configuration.Expiry = token.Expiry
+	configuration.RefreshToken = token.RefreshToken
+	configuration.TokenType = token.TokenType
+	l.InfoF("Saved token to configuration")
+	saveConfig()
+}
+
+// Inst is an installed struct for google
+type Inst struct {
+	ClientID                string   `json:"client_id"`
+	ProjectID               string   `json:"project_id"`
+	AuthURI                 string   `json:"auth_uri"`
+	TokenURI                string   `json:"token_uri"`
+	AuthProviderx509CertURL string   `json:"auth_provider_x509_cert_url"`
+	ClientSecret            string   `json:"client_secret"`
+	RedirectURIs            []string `json:"redirect_uris"`
+}
+
+// Gtoken is required by google
+type Gtoken struct {
+	Installed Inst `json:"installed"`
+}
 
 func main() {
 	// Open Configuration and set log output
@@ -42,9 +147,43 @@ func main() {
 	l := LogInit("main-main.go")
 	defer l.End()
 
-	loadItemDB(configuration.LucyItems)
+	itemDB = loaditemDB(configuration.LucyItems)
 	archives = getArchiveList()
-	// bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
+	loadRoster(configuration.GuildRosterPath)
+
+	gtoken := &Gtoken{
+		Installed: Inst{
+			ClientID:                configuration.ClientID,
+			ProjectID:               configuration.ProjectID,
+			AuthURI:                 configuration.AuthURI,
+			TokenURI:                configuration.TokenURI,
+			AuthProviderx509CertURL: configuration.AuthProviderx509CertURL,
+			ClientSecret:            configuration.ClientSecret,
+			RedirectURIs:            configuration.RedirectURIs,
+		},
+	}
+	l.InfoF("Marshalling gToken: %+v", gtoken)
+	bToken, err := json.Marshal(gtoken)
+	if err != nil {
+		l.FatalF("error marshalling gtoken")
+	}
+
+	// b, err := ioutil.ReadFile("credentials.json")
+	// if err != nil {
+	// 	log.Fatalf("Unable to read client secret file: %v", err)
+	// }
+
+	// If modifying these scopes, delete your previously saved token.json.
+	config, err := google.ConfigFromJSON(bToken, "https://www.googleapis.com/auth/spreadsheets")
+	if err != nil {
+		l.FatalF("Unable to parse client secret file to config: %v", err)
+	}
+	client := getClient(config)
+
+	srv, err = sheets.New(client)
+	if err != nil {
+		l.FatalF("Unable retrieve Sheets client: %v", err)
+	}
 
 	// Create a new Discord session using the provided bot token.
 	discord, err = discordgo.New("Bot " + configuration.DiscordToken)
@@ -53,8 +192,10 @@ func main() {
 	}
 	defer discord.Close()
 	// discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
-	// uploadArchive("1ad7487f-e1d4-4b15-ba52-100ac34a245e")
-	// go bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
+	// updateDKP()
+	// dumpPlayers()
+	fmt.Println(itemDB["Vyemm's Fang"])
+	go bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
 
 	// // Register the messageCreate func as a callback for MessageCreate events.
 	// dg.AddHandler(messageCreate)
@@ -282,6 +423,7 @@ func openBid(item string, count int, id int) {
 		return
 	}
 	l.InfoF("Opening bid for: %s x%d\n", item, count)
+	updateDKP() // update player dkp with bid
 	bids[item] = &BidItem{}
 	bids[item].Item = item
 	bids[item].Count = count
@@ -304,6 +446,7 @@ func isBidOpen(item string) bool {
 // Bid defines a bid on an item from a player
 type Bid struct {
 	Bidder string `json:"Bidder"`
+	Player Player `json:"Player"`
 	Amount int    `json:"Amount"`
 }
 
@@ -341,10 +484,13 @@ func (b *BidItem) addBid(user string, item string, amount int) {
 	defer l.End()
 	bidLock.Lock()
 	defer bidLock.Unlock()
+	if !hasEnoughDKP(user, amount) {
+		amount = -5
+	}
 
 	bid := Bid{
 		Bidder: user,
-		// item:   item,
+		Player: *roster[user],
 		Amount: amount,
 	}
 	existing := b.bidderExists(user)
@@ -382,9 +528,9 @@ func (b *BidItem) closeBid() {
 	for i, winner := range b.getWinners(b.Count) {
 		// winAmount = winner.Amount
 		if i > 0 {
-			response = fmt.Sprintf("%s, and %s", response, winner.Name)
+			response = fmt.Sprintf("%s, and %s", response, winner.Player.Name)
 		} else {
-			response = fmt.Sprintf("%s for %d is %s", response, winner.Amount, winner.Name)
+			response = fmt.Sprintf("%s for %d is %s", response, winner.Amount, winner.Player.Name)
 		}
 	}
 	response = fmt.Sprintf("%s\n[%s]", response, "Mortimus") // TODO: Pull this name from the log being monitored
@@ -392,7 +538,7 @@ func (b *BidItem) closeBid() {
 	var fields []*discordgo.MessageEmbedField
 	for _, winner := range b.getWinners(b.Count) {
 		fields = append(fields, &discordgo.MessageEmbedField{
-			Name:  winner.Name,
+			Name:  winner.Player.Name,
 			Value: strconv.Itoa(winner.Amount),
 		})
 	}
@@ -427,7 +573,7 @@ func (b *BidItem) closeBid() {
 
 // Winner is the user who won items
 type Winner struct {
-	Name   string `json:"Name"`
+	Player Player `json:"Player"`
 	Amount int    `json:"Amount"`
 }
 
@@ -449,9 +595,24 @@ func (b *BidItem) getWinners(count int) []Winner {
 		winningbid = b.Bids[0].Amount
 	}
 	var winners []Winner
+	rot := &Player{
+		Name:  "Rot",
+		DKP:   0,
+		Main:  "Rot",
+		Level: 0,
+		Class: "Necromancer",
+		Rank:  "Alt",
+		Alt:   true,
+	}
 	for i := 0; i < count; i++ {
+		var win Player
+		if _, ok := roster[b.Bids[i].Bidder]; ok {
+			win = *roster[b.Bids[i].Bidder]
+		} else {
+			win = *rot
+		}
 		winner := Winner{
-			Name:   b.Bids[i].Bidder,
+			Player: win,
 			Amount: winningbid,
 		}
 		winners = append(winners, winner)
@@ -475,15 +636,15 @@ func dumpBids() {
 	}
 }
 
-func loadItemDB(file string) {
-	l := LogInit("loadItemDB-main.go")
+func loaditemDB(file string) map[string]int {
+	l := LogInit("loaditemDB-main.go")
 	defer l.End()
 	csvfile, err := os.Open(file)
 	if err != nil {
 		log.Fatalln("Couldn't open the csv file", err)
 	}
 	defer csvfile.Close()
-	itemDB = make(map[string]int)
+	itemDB := make(map[string]int)
 
 	// Parse the file
 	r := csv.NewReader(csvfile)
@@ -511,12 +672,18 @@ func loadItemDB(file string) {
 			log.Fatal(err)
 		}
 		itemDB[record[1]] = itemID
+		// fmt.Printf("Item: %s ID: %d\n", record[1], itemID)
+		// fmt.Println(itemDB[record[1]])
 	}
+	l.InfoF("Loaded itemDB")
+	return itemDB
 }
 
 func isItem(name string) int {
 	l := LogInit("isItem-main.go")
 	defer l.End()
+	itemLock.Lock()
+	defer itemLock.Unlock()
 	if _, ok := itemDB[name]; ok {
 		return itemDB[name]
 	}
@@ -619,13 +786,13 @@ func loadRoster(file string) {
 	defer l.End()
 	csvfile, err := os.Open(file)
 	if err != nil {
-		log.Fatalln("Couldn't open the csv file", err)
+		log.Fatalln("Couldn't open the roster csv file", err)
 	}
 	defer csvfile.Close()
-	itemDB = make(map[string]int)
 
 	// Parse the file
 	r := csv.NewReader(csvfile)
+	r.Comma = '\t'
 	//r := csv.NewReader(bufio.NewReader(csvfile))
 
 	// Iterate through the records
@@ -642,7 +809,7 @@ func loadRoster(file string) {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			l.ErrorF("Error loading roster: %s", err.Error())
 		}
 		var player Player
 		player.Name = record[0]
@@ -654,17 +821,117 @@ func loadRoster(file string) {
 		player.Class = record[2]
 		if record[4] == "A" {
 			player.Alt = true
+			player.Rank = "Alt" // Default to alt for now
+			// Figure out if secondmain, alt, recruit
+			// Figure out alt's main
+			r, _ := regexp.Compile(configuration.RegexIsAlt) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
+			Altresult := r.FindStringSubmatch(record[7])
+			if len(Altresult) > 0 {
+				player.Main = Altresult[1]
+			}
+			// Figure out secondmain and it's main
+			r, _ = regexp.Compile(configuration.RegexIs2ndMain) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
+			SecondMainResult := r.FindStringSubmatch(record[7])
+			if len(SecondMainResult) > 0 {
+				player.Main = SecondMainResult[1]
+				player.Rank = "2ndMain"
+			}
 		} // defaults to false
-		roster[record[0]] = player
+		if !player.Alt && isRaider(record[3]) { // not an alt and a raider, so is a main
+			player.Rank = "Main"
+			player.Main = player.Name
+		}
+		if record[3] == "Recruit" {
+			player.Rank = "Recruit"
+			player.Main = player.Name
+		}
+		if record[3] == "Inactive" {
+			player.Rank = "Inactive"
+			player.Main = player.Name
+		}
+		roster[player.Name] = &player
+	}
+	l.InfoF("Loaded Roster")
+}
+
+func dumpPlayers() {
+	for _, p := range roster {
+		fmt.Printf("%#+v\n", p)
 	}
 }
 
 // Player is represented by Name, Level, Class, Rank, Alt, Last On, Zone, Note, Tribute Status, Unk_1, Unk_2, Last Donation, Private Note
 type Player struct {
 	Name  string `json:"Name"`
+	Main  string `json:"Main"` // Name of player's main
 	Level int    `json:"Level"`
 	Class string `json:"Class"`
 	Rank  string `json:"Rank"` // this is a meta field, its not direct from the rank column
 	Alt   bool   `json:"Alt"`
 	DKP   int    `json:"DKP"` // this is filled in post from google sheets
+}
+
+func isRaider(rank string) bool {
+	for _, r := range configuration.GuildRaidingRoles {
+		if r == rank {
+			return true
+		}
+	}
+	return false
+}
+
+func updatePlayerDKP(name string, dkp int) {
+	// fmt.Printf("Attempting to update %s's dkp to %d\n", name, dkp)
+	rosterLock.Lock()
+	defer rosterLock.Unlock()
+	roster[name].DKP = dkp
+}
+
+func updateDKP() {
+	l := LogInit("lookupPlayer-commands.go")
+	defer l.End()
+	spreadsheetID := configuration.DKPSheetURL
+	readRange := configuration.DKPSummarySheetName
+	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, readRange).Do()
+	if err != nil {
+		l.ErrorF("Unable to retrieve data from sheet: %v", err)
+		return
+	}
+
+	if len(resp.Values) == 0 {
+		l.ErrorF("Cannot read dkp sheet: %v", resp)
+		// log.Println("No data found.")
+	} else {
+		// var lastClass string
+		for _, row := range resp.Values {
+			// if row[0] == "Necromancer" {
+			// 	fmt.Printf("%s: %s\n", row[2], row[6])
+			// }
+			// l.TraceF("Player: %s Target: %s", row[configuration.DKPSRosterSheetPlayerCol], strings.TrimSpace(tar))
+			name := fmt.Sprintf("%s", row[configuration.DKPSummarySheetPlayerCol])
+			name = strings.TrimSpace(name)
+			if name != "" {
+				sDKP := fmt.Sprintf("%s", row[configuration.DKPSummarySheetDKPCol])
+				sDKP = strings.ReplaceAll(sDKP, ",", "")
+				dkp, err := strconv.Atoi(sDKP)
+				if err != nil {
+					l.ErrorF("Error converting DKP to int: %s", err.Error())
+					continue
+				}
+				updatePlayerDKP(name, dkp)
+			}
+		}
+	}
+}
+
+func hasEnoughDKP(name string, amount int) bool {
+	l := LogInit("hasEnoughDKP-commands.go")
+	defer l.End()
+	rosterLock.Lock()
+	defer rosterLock.Unlock()
+	if amount < 10 || roster[name].DKP >= amount { // You can always spend 10dkp
+		return true
+	}
+	l.WarnF("%s does not have %d DKP but tried to spend it", name, amount)
+	return false
 }
