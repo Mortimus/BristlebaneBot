@@ -41,6 +41,14 @@ var rosterLock sync.Mutex
 // srv is the global to connect to google sheets
 var srv *sheets.Service
 
+const (
+	cInactive = iota
+	cAlt
+	cRecruit
+	cSecondMain
+	cMain
+)
+
 // Retrieve a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config) *http.Client {
 	l := LogInit("getClient-main.go")
@@ -487,6 +495,9 @@ func (b *BidItem) addBid(user string, item string, amount int) {
 	if !hasEnoughDKP(user, amount) {
 		amount = -5
 	}
+	if _, ok := roster[user]; !ok {
+		return
+	}
 
 	bid := Bid{
 		Bidder: user,
@@ -537,8 +548,12 @@ func (b *BidItem) closeBid() {
 	l.InfoF(response)
 	var fields []*discordgo.MessageEmbedField
 	for _, winner := range b.getWinners(b.Count) {
+		displayName := winner.Player.Name
+		if winner.Player.Name != winner.Player.Main {
+			displayName = fmt.Sprintf("%s (%s)", winner.Player.Name, winner.Player.Main)
+		}
 		fields = append(fields, &discordgo.MessageEmbedField{
-			Name:  winner.Player.Name,
+			Name:  displayName,
 			Value: strconv.Itoa(winner.Amount),
 		})
 	}
@@ -586,7 +601,9 @@ func (b *BidItem) getWinners(count int) []Winner {
 		}
 		b.Bids = append(b.Bids, fakeBid)
 	}
-	sort.Sort(sort.Reverse(ByBid(b.Bids)))
+	// sort.Sort(sort.Reverse(ByBid(b.Bids)))
+	b.Bids = sortBids(b.Bids)
+	// TODO: Account for ties
 	winningbid := b.Bids[count].Amount + configuration.BidIncrements
 	if b.Bids[0].Bidder != "Rot" && winningbid < configuration.MinimumBid {
 		winningbid = configuration.MinimumBid
@@ -601,7 +618,7 @@ func (b *BidItem) getWinners(count int) []Winner {
 		Main:  "Rot",
 		Level: 0,
 		Class: "Necromancer",
-		Rank:  "Alt",
+		Rank:  cInactive,
 		Alt:   true,
 	}
 	for i := 0; i < count; i++ {
@@ -618,6 +635,41 @@ func (b *BidItem) getWinners(count int) []Winner {
 		winners = append(winners, winner)
 	}
 	b.Winners = winners
+	return winners
+}
+
+func sortBids(bids []Bid) []Bid {
+	var mains []Bid
+	var secondmains []Bid
+	var recruits []Bid
+	var alts []Bid
+	var inactives []Bid
+
+	for _, bid := range bids {
+		switch bid.Player.Rank {
+		case cMain:
+			mains = append(mains, bid)
+		case cSecondMain:
+			secondmains = append(secondmains, bid)
+		case cRecruit:
+			recruits = append(recruits, bid)
+		case cAlt:
+			alts = append(alts, bid)
+		case cInactive:
+			inactives = append(inactives, bid)
+		}
+	}
+	sort.Sort(sort.Reverse(ByBid(mains)))
+	sort.Sort(sort.Reverse(ByBid(secondmains)))
+	sort.Sort(sort.Reverse(ByBid(recruits)))
+	sort.Sort(sort.Reverse(ByBid(alts)))
+	sort.Sort(sort.Reverse(ByBid(inactives)))
+	var winners []Bid
+	winners = append(winners, mains...)
+	winners = append(winners, secondmains...)
+	winners = append(winners, recruits...)
+	winners = append(winners, alts...)
+	winners = append(winners, inactives...)
 	return winners
 }
 
@@ -821,7 +873,7 @@ func loadRoster(file string) {
 		player.Class = record[2]
 		if record[4] == "A" {
 			player.Alt = true
-			player.Rank = "Alt" // Default to alt for now
+			player.Rank = cAlt // Default to alt for now
 			// Figure out if secondmain, alt, recruit
 			// Figure out alt's main
 			r, _ := regexp.Compile(configuration.RegexIsAlt) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
@@ -834,19 +886,19 @@ func loadRoster(file string) {
 			SecondMainResult := r.FindStringSubmatch(record[7])
 			if len(SecondMainResult) > 0 {
 				player.Main = SecondMainResult[1]
-				player.Rank = "2ndMain"
+				player.Rank = cSecondMain
 			}
 		} // defaults to false
 		if !player.Alt && isRaider(record[3]) { // not an alt and a raider, so is a main
-			player.Rank = "Main"
+			player.Rank = cMain
 			player.Main = player.Name
 		}
 		if record[3] == "Recruit" {
-			player.Rank = "Recruit"
+			player.Rank = cRecruit
 			player.Main = player.Name
 		}
 		if record[3] == "Inactive" {
-			player.Rank = "Inactive"
+			player.Rank = cInactive
 			player.Main = player.Name
 		}
 		roster[player.Name] = &player
@@ -866,7 +918,7 @@ type Player struct {
 	Main  string `json:"Main"` // Name of player's main
 	Level int    `json:"Level"`
 	Class string `json:"Class"`
-	Rank  string `json:"Rank"` // this is a meta field, its not direct from the rank column
+	Rank  int    `json:"Rank"` // this is a meta field, its not direct from the rank column
 	Alt   bool   `json:"Alt"`
 	DKP   int    `json:"DKP"` // this is filled in post from google sheets
 }
@@ -929,7 +981,11 @@ func hasEnoughDKP(name string, amount int) bool {
 	defer l.End()
 	rosterLock.Lock()
 	defer rosterLock.Unlock()
-	if amount < 10 || roster[name].DKP >= amount { // You can always spend 10dkp
+	var bHasDKP bool
+	if _, ok := roster[name]; ok {
+		bHasDKP = true
+	}
+	if amount < 10 || (bHasDKP && roster[name].DKP >= amount) { // You can always spend 10dkp
 		return true
 	}
 	l.WarnF("%s does not have %d DKP but tried to spend it", name, amount)
