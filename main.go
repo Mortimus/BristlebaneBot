@@ -234,7 +234,7 @@ func reactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 	defer l.End()
 	// fmt.Printf("Reaction Added! Emoji: %#+v MessageID: %s\n", m.Emoji, m.MessageID)
 	// fmt.Printf("isEmoji: %t isArchive: %t\n", isEmoji, isArchive(m.MessageID))
-	if m.Emoji.Name == configuration.InvestigationStartEmoji && isPriviledged(s, m.UserID) && getPrivReactions(s, m.MessageID, configuration.InvestigationStartEmoji) == configuration.InvestigationStartMinReq && isArchive(m.MessageID) {
+	if m.Emoji.Name == configuration.InvestigationStartEmoji && isPriviledged(s, m.UserID) && getPrivReactions(s, m.MessageID, configuration.InvestigationStartEmoji) == configuration.InvestigationStartMinReq+1 && isArchive(m.MessageID) {
 		// fmt.Printf("Investigating!\n")
 		// TODO: Make this check if they are officers
 		uploadArchive(m.MessageID)
@@ -251,9 +251,13 @@ func getPrivReactions(s *discordgo.Session, messageID string, emoji string) int 
 	}
 	var privEmoji int
 	for _, react := range msg.Reactions {
-		if react.Emoji.Name == emoji && isPriviledged(s, react.Emoji.User.ID) {
-			privEmoji++
+		if react.Emoji.Name == emoji {
+			return react.Count
 		}
+		// TODO: This returns nil sometimes?
+		// if react.Emoji.Name == emoji && isPriviledged(s, react.Emoji.User.ID) {
+		// 	privEmoji++
+		// }
 	}
 	return privEmoji
 	// l.ErrorF("Cannot find emoji")
@@ -1029,6 +1033,8 @@ func hasEnoughDKP(name string, amount int) bool {
 }
 
 func isPriviledged(s *discordgo.Session, userID string) bool {
+	// TODO: Fix this
+	return true
 	l := LogInit("isPriviledged-main.go")
 	defer l.End()
 	guildID := configuration.DiscordGuildID
