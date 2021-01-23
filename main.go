@@ -38,6 +38,9 @@ var archives []string     // stores all known archive files for recall
 var roster = map[string]*Player{}
 var rosterLock sync.Mutex
 
+// var needsReact map[string]*bool
+// var needsReactLock sync.Mutex
+
 // srv is the global to connect to google sheets
 var srv *sheets.Service
 
@@ -596,10 +599,11 @@ func (b *BidItem) closeBid() {
 	if err != nil {
 		l.ErrorF("Error sending discord message: %s", err.Error())
 	}
-	err = discord.MessageReactionAdd(configuration.LootChannelID, dMsg.ChannelID, configuration.InvestigationStartEmoji)
+	err = discord.MessageReactionAdd(configuration.LootChannelID, dMsg.ID, configuration.InvestigationStartEmoji)
 	if err != nil {
 		l.ErrorF("Error adding base reaction: %s", err.Error())
 	}
+	// addReact(dMsg.ID)
 	b.InvestigationLogs = investigation
 	// Write bid to archive
 	writeArchive(dMsg.ID, *b)
@@ -834,9 +838,9 @@ func uploadArchive(id string) {
 	}
 }
 
-func checkReactions() {
-	discord.MessageReactions(configuration.LootChannelID, "801309136020570154", ":mag_right:", 100, "", "")
-}
+// func checkReactions() {
+// 	discord.MessageReactions(configuration.LootChannelID, "801309136020570154", ":mag_right:", 100, "", "")
+// }
 
 func getArchiveList() []string { // TODO: get directory listing on archives
 	l := LogInit("getArchiveList-main.go")
@@ -1052,3 +1056,30 @@ func isPriviledged(s *discordgo.Session, userID string) bool {
 	}
 	return false
 }
+
+// func addReact(msgID string) {
+// 	needsReactLock.Unlock()
+// 	defer needsReactLock.Lock()
+// 	*needsReact[msgID] = true
+// }
+
+// func removeReact(msgID string) {
+// 	needsReactLock.Unlock()
+// 	defer needsReactLock.Lock()
+// 	delete(needsReact, msgID)
+// }
+
+// func checkReacts() {
+// 	l := LogInit("checkReacts-commands.go")
+// 	defer l.End()
+// 	needsReactLock.Unlock()
+// 	defer needsReactLock.Lock()
+// 	for k := range needsReact {
+// 		err := discord.MessageReactionAdd(configuration.LootChannelID, k, configuration.InvestigationStartEmoji)
+// 		if err != nil {
+// 			l.ErrorF("Error adding base reaction: %s", err.Error())
+// 		} else {
+// 			removeReact(k)
+// 		}
+// 	}
+// }
