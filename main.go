@@ -558,7 +558,8 @@ func (b *BidItem) closeBid() {
 	// Handle Bid winnner
 	response := fmt.Sprintf("Winner(s) of %s (%s) x%d", b.Item, b.URL, b.Count)
 	// var winAmount int
-	for i, winner := range b.getWinners(b.Count) {
+	winners := b.getWinners(b.Count)
+	for i, winner := range winners {
 		// winAmount = winner.Amount
 		if i > 0 {
 			response = fmt.Sprintf("%s, and %s", response, winner.Player.Name)
@@ -566,10 +567,10 @@ func (b *BidItem) closeBid() {
 			response = fmt.Sprintf("%s for %d is %s", response, winner.Amount, winner.Player.Name)
 		}
 	}
-	response = fmt.Sprintf("%s\n[%s]", response, "Mortimus") // TODO: Pull this name from the log being monitored
+	response = fmt.Sprintf("%s\n[%s]", response, getPlayerName(configuration.EQLogPath)) // TODO: Pull this name from the log being monitored
 	l.InfoF(response)
 	var fields []*discordgo.MessageEmbedField
-	for _, winner := range b.getWinners(b.Count) {
+	for _, winner := range winners {
 		displayName := winner.Player.Name
 		if winner.Player.Name != winner.Player.Main {
 			displayName = fmt.Sprintf("%s (%s)", winner.Player.Name, winner.Player.Main)
@@ -584,7 +585,7 @@ func (b *BidItem) closeBid() {
 	// var provider discordgo.MessageEmbedProvider
 	// provider.Name = sig.String()
 	var footer discordgo.MessageEmbedFooter
-	footer.Text = "Mortimus" // TODO: Pull this from the log being monitored
+	footer.Text = getPlayerName(configuration.EQLogPath) // TODO: Pull this from the log being monitored
 	footer.IconURL = configuration.DiscordLootIcon
 
 	embed := discordgo.MessageEmbed{
@@ -1083,3 +1084,17 @@ func isPriviledged(s *discordgo.Session, userID string) bool {
 // 		}
 // 	}
 // }
+
+func getPlayerName(logFile string) string {
+	// l := LogInit("getPlayerName-commands.go")
+	// defer l.End()
+	logFile = filepath.Base(logFile)
+	extension := filepath.Ext(logFile)
+	name := logFile[0 : len(logFile)-len(extension)]
+	split := strings.Split(name, "_")
+	// fmt.Printf("LogFile: %s\nExtension: %s\nName: %s\nSplit: %#+v\n", logFile, extension, name, split)
+	if len(split) < 3 {
+		return "Unknown Player"
+	}
+	return split[2] + "." + split[1]
+}
