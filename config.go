@@ -53,6 +53,8 @@ type Configuration struct {
 	DKPSummarySheetName          string    `json:"DKPSummarySheetName"`          // Google sheets sheet name for the DKP lookup
 	DKPSummarySheetPlayerCol     int       `json:"DKPSummarySheetPlayerCol"`     // Google sheet sheet column for player names
 	DKPSummarySheetDKPCol        int       `json:"DKPSummarySheetDKPCol"`        // Google sheet sheet column for dkp
+	DiscordPrivRoles             []string  `json:"DiscordPrivRoles"`             // Discord Roles that are allowed to start investigations
+	DiscordGuildID               string    `json:"DiscordGuildID"`               // Discord Guild ID
 }
 
 func init() {

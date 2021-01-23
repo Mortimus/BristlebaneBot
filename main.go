@@ -202,7 +202,7 @@ func main() {
 	// discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 	// updateDKP()
 	// dumpPlayers()
-	fmt.Println(itemDB["Vyemm's Fang"])
+	// fmt.Println(itemDB["Vyemm's Fang"])
 	go bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
 
 	// // Register the messageCreate func as a callback for MessageCreate events.
@@ -231,13 +231,14 @@ func reactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 	defer l.End()
 	// fmt.Printf("Reaction Added! Emoji: %#+v MessageID: %s\n", m.Emoji, m.MessageID)
 	// fmt.Printf("isEmoji: %t isArchive: %t\n", isEmoji, isArchive(m.MessageID))
-	if m.Emoji.Name == configuration.InvestigationStartEmoji && getReactions(m.MessageID, configuration.InvestigationStartEmoji) >= configuration.InvestigationStartMinReq && isArchive(m.MessageID) {
+	if m.Emoji.Name == configuration.InvestigationStartEmoji && isPriviledged(s, m.UserID) && getPrivReactions(s, m.MessageID, configuration.InvestigationStartEmoji) == configuration.InvestigationStartMinReq && isArchive(m.MessageID) {
 		// fmt.Printf("Investigating!\n")
+		// TODO: Make this check if they are officers
 		uploadArchive(m.MessageID)
 	}
 }
 
-func getReactions(messageID string, emoji string) int {
+func getPrivReactions(s *discordgo.Session, messageID string, emoji string) int {
 	l := LogInit("getReactions-main.go")
 	defer l.End()
 	msg, err := discord.ChannelMessage(configuration.LootChannelID, messageID)
@@ -245,13 +246,15 @@ func getReactions(messageID string, emoji string) int {
 		l.ErrorF("Error getting message: %s", err.Error())
 		return -1
 	}
+	var privEmoji int
 	for _, react := range msg.Reactions {
-		if react.Emoji.Name == emoji {
-			return react.Count
+		if react.Emoji.Name == emoji && isPriviledged(s, react.Emoji.User.ID) {
+			privEmoji++
 		}
 	}
-	l.ErrorF("Cannot find emoji")
-	return -1 // Emoji not found
+	return privEmoji
+	// l.ErrorF("Cannot find emoji")
+	// return -1 // Emoji not found
 }
 
 func bufferedRead(path string, fromStart bool) {
@@ -271,7 +274,7 @@ func bufferedRead(path string, fromStart bool) {
 		checkClosedBids()
 		str, err := bufferedReader.ReadString('\n')
 		if err == io.EOF {
-			dumpBids()
+			// dumpBids()
 			time.Sleep(time.Duration(configuration.LogPollRate) * time.Second) // 1 eq tick = 6 seconds
 			continue
 		}
@@ -372,17 +375,32 @@ func parseLogLine(log EqLog) {
 	}
 	if log.Channel == "guild" {
 		investigation.addLog(log)
-		// Open Bid
-		r, _ := regexp.Compile(`'(.+?)x?(\d)?\s+bids\sto\s.+,.+(\d+).*'`) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
+		// Close Bid
+		r, _ := regexp.Compile(`'(.+?)x?(\d)?\s+bids\sto\s.+,.+([Cc][Ll][Oo][Ss][Ee][Dd]).*(\d+).*'`) // TODO: Force this to match only the bidmaster
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
-			// var bid string
-			// var err error
-			// bidClean := strings.ReplaceAll(result[2], ",", "")
-			// count, err := strconv.Atoi(bidClean)
-			// if err != nil {
-			// 	l.ErrorF("Error converting count to int: %s", result[2])
-			// }
+			itemID := isItem(result[1])
+			if itemID > 0 { // item numbers are positive
+				if result[2] == "" {
+					// openBid(result[1], 1, itemID)
+					if _, ok := bids[result[1]]; ok { // Verify bid open, then set end time to start time to close it
+						bids[result[1]].End = bids[result[1]].Start // force the bid to show as done
+					}
+				} else {
+					count, err := strconv.Atoi(result[2])
+					if err != nil {
+						l.ErrorF("Error converting item count to int: %s", err.Error())
+					}
+					openBid(result[1], count, itemID)
+				}
+
+			}
+			return
+		}
+		// Open Bid
+		r, _ = regexp.Compile(`'(.+?)x?(\d)?\s+bids\sto\s.+,.+(\d+).*'`) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
+		result = r.FindStringSubmatch(log.Msg)
+		if len(result) > 0 {
 			itemID := isItem(result[1])
 			if itemID > 0 { // item numbers are positive
 				if result[2] == "" {
@@ -398,6 +416,7 @@ func parseLogLine(log EqLog) {
 			}
 			return
 		}
+
 	}
 	if log.Channel == "tell" {
 		investigation.addLog(log)
@@ -610,6 +629,18 @@ func (b *BidItem) getWinners(count int) []Winner {
 	}
 	if winningbid > b.Bids[0].Amount { // account for ties
 		winningbid = b.Bids[0].Amount
+		if winningbid == b.Bids[count-1].Amount {
+			// A ROLL OFF IS NEEDED
+			// Determine AMOUNT of ties
+			var ties int
+			for _, bidder := range b.Bids {
+				if bidder.Amount == winningbid && b.Bids[0].Player.Rank == bidder.Player.Rank { // is tied winner
+					ties++
+				}
+			}
+			count = ties // show winners == amount of ties to imply roll off
+			discord.ChannelMessageSend(configuration.LootChannelID, "Roll off required!")
+		}
 	}
 	var winners []Winner
 	rot := &Player{
@@ -989,5 +1020,35 @@ func hasEnoughDKP(name string, amount int) bool {
 		return true
 	}
 	l.WarnF("%s does not have %d DKP but tried to spend it", name, amount)
+	return false
+}
+
+func isPriviledged(s *discordgo.Session, userID string) bool {
+	l := LogInit("isPriviledged-main.go")
+	defer l.End()
+	guildID := configuration.DiscordGuildID
+	l.InfoF("GuildID: %+v\nUserID: %+v", guildID, userID)
+	member, err := s.State.Member(guildID, userID)
+	if err != nil {
+		// if member, err = s.GuildMember(guildID, userID); err != nil {
+		// 	return false, err
+		// }
+		l.ErrorF("Error: %s", err.Error())
+	}
+	l.InfoF("Member: %+v", member)
+	for _, roleID := range member.Roles {
+		role, err := s.State.Role(guildID, roleID)
+		if err != nil {
+			l.ErrorF("Error: %s", err.Error())
+			return false
+		}
+		for _, cRole := range configuration.DiscordPrivRoles {
+			l.InfoF("Crole: %v vs role.Name: %v", cRole, role.Name)
+			if cRole == role.Name {
+				l.InfoF("Role found, authorizing: %s == %s", cRole, role.Name)
+				return true
+			}
+		}
+	}
 	return false
 }
