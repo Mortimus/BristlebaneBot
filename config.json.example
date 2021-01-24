@@ -39,10 +39,11 @@
 	"DKPSummarySheetPlayerCol":2,
 	"DKPSummarySheetDKPCol":6,
 	"DiscordPrivRoles":["ADMIN","OFFICER"],
-	"DiscordGuildID":"795741046104522802",
+	"DiscordGuildID":"DISCORD_GUILD_ID",
 	"RegexClosedBid":"'(.+?)x?(\\d)?\\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\\sto\\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*'",
 	"RegexOpenBid":"'(.+?)x?(\\d)?\\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\\sto\\s.+,?.+(\\d+).*'",
 	"RegexTellBid":"'(.+)\\s+(\\d+).*'",
 	"GuildName":"MY_GUILD_NAME",
-	"EQBaseFolder":"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Everquest F2P"
+	"EQBaseFolder":"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Everquest F2P",
+	"BidsOnlyCloseAutomatically":true
 }
