@@ -59,6 +59,7 @@ type Configuration struct {
 	RegexTellBid                 string    `json:"RegexTellBid"`                 // Regex for detecting a bid being sent via tell
 	GuildName                    string    `json:"GuildName"`                    // GuildName is the full string of the guild name to determine guild dump files
 	EQBaseFolder                 string    `json:"EQBaseFolder"`                 // Base EQ folder (where eqgame.exe is) to find guild dumps
+	BidsOnlyCloseAutomatically   bool      `json:"BidsOnlyCloseAutomatically"`   // If true, bids close by time, if false it closes by message
 }
 
 func init() {

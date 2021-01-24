@@ -571,7 +571,7 @@ func (b *BidItem) closeBid() {
 			response = fmt.Sprintf("%s for %d is %s", response, winner.Amount, winner.Player.Name)
 		}
 	}
-	response = fmt.Sprintf("%s\n[%s]", response, getPlayerName(configuration.EQLogPath)) // TODO: Pull this name from the log being monitored
+	response = fmt.Sprintf("%s\n[%s]", response, getPlayerName(configuration.EQLogPath))
 	l.InfoF(response)
 	var fields []*discordgo.MessageEmbedField
 	for _, winner := range winners {
