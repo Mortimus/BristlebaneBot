@@ -638,7 +638,7 @@ func (b *BidItem) getWinners(count int) []Winner {
 	}
 	if winningbid > b.Bids[0].Amount { // account for ties
 		winningbid = b.Bids[0].Amount
-		if winningbid == b.Bids[count-1].Amount {
+		if winningbid == b.Bids[count-1].Amount && b.Bids[count-1].Bidder != "Rot" {
 			// A ROLL OFF IS NEEDED
 			// Determine AMOUNT of ties
 			var ties int
