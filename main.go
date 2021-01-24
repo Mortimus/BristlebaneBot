@@ -973,10 +973,25 @@ func isRaider(rank string) bool {
 }
 
 func updatePlayerDKP(name string, dkp int) {
-	// fmt.Printf("Attempting to update %s's dkp to %d\n", name, dkp)
+	l := LogInit("updatePlayerDKP-commands.go")
+	defer l.End()
 	rosterLock.Lock()
 	defer rosterLock.Unlock()
-	roster[name].DKP = dkp
+	if _, ok := roster[name]; ok {
+		roster[name].DKP = dkp
+		return
+	}
+	l.ErrorF("Cannot find player to update DKP: %s giving them 0 dkp", name)
+	DiscordF("Error configuring %s's DKP, are they on the DKP sheet, Roster Dump, and are the Guild Notes correctly?", name)
+	roster[name] = &Player{
+		Name:  name,
+		Main:  name,
+		DKP:   0,
+		Level: 0,
+		Class: "Unknown",
+		Rank:  cInactive,
+		Alt:   false,
+	}
 }
 
 func updateDKP() {
@@ -1103,4 +1118,15 @@ func getPlayerName(logFile string) string {
 		return "Unknown Player"
 	}
 	return split[2] + "." + split[1]
+}
+
+// DiscordF provides a printf to a discord channel
+func DiscordF(format string, v ...interface{}) {
+	l := LogInit("DiscordF-commands.go")
+	defer l.End()
+	msg := fmt.Sprintf(format, v...)
+	_, err := discord.ChannelMessageSend(configuration.InvestigationChannelID, msg)
+	if err != nil {
+		l.ErrorF("Failed to send to discord: %s", err.Error())
+	}
 }
