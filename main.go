@@ -383,7 +383,7 @@ func parseLogLine(log EqLog) {
 	if log.Channel == "guild" {
 		investigation.addLog(log)
 		// Close Bid
-		r, _ := regexp.Compile(`'(.+?)x?(\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*'`) // TODO: Force this to match only the bidmaster
+		r, _ := regexp.Compile(configuration.RegexClosedBid) // TODO: Force this to match only the bidmaster
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
 			itemID := isItem(result[1])
@@ -405,7 +405,7 @@ func parseLogLine(log EqLog) {
 			return
 		}
 		// Open Bid
-		r, _ = regexp.Compile(`'(.+?)x?(\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*'`) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
+		r, _ = regexp.Compile(configuration.RegexOpenBid) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
 		result = r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
 			itemID := isItem(result[1])
@@ -428,7 +428,7 @@ func parseLogLine(log EqLog) {
 	if log.Channel == "tell" {
 		investigation.addLog(log)
 		// Add Bid
-		r, _ := regexp.Compile(`'(.+)\s+(\d+).*'`)
+		r, _ := regexp.Compile(configuration.RegexTellBid)
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
 			// var bid string

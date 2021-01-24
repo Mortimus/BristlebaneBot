@@ -55,6 +55,9 @@ type Configuration struct {
 	DKPSummarySheetDKPCol        int       `json:"DKPSummarySheetDKPCol"`        // Google sheet sheet column for dkp
 	DiscordPrivRoles             []string  `json:"DiscordPrivRoles"`             // Discord Roles that are allowed to start investigations
 	DiscordGuildID               string    `json:"DiscordGuildID"`               // Discord Guild ID
+	RegexClosedBid               string    `json:"RegexClosedBid"`               // Regex for detecting a bid being closed
+	RegexOpenBid                 string    `json:"RegexOpenBid"`                 // Regex for detecting a bid being opened
+	RegexTellBid                 string    `json:"RegexTellBid"`                 // Regex for detecting a bid being sent via tell
 }
 
 func init() {
