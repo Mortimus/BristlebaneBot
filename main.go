@@ -157,10 +157,10 @@ func main() {
 	log.SetOutput(configFile)
 	l := LogInit("main-main.go")
 	defer l.End()
-
 	itemDB = loaditemDB(configuration.LucyItems)
 	archives = getArchiveList()
-	loadRoster(configuration.GuildRosterPath)
+	// loadRoster(configuration.GuildRosterPath)
+	loadRoster(configuration.EQBaseFolder + "/" + getRecentRosterDump(configuration.EQBaseFolder))
 
 	gtoken := &Gtoken{
 		Installed: Inst{
@@ -982,7 +982,7 @@ func updatePlayerDKP(name string, dkp int) {
 		return
 	}
 	l.ErrorF("Cannot find player to update DKP: %s giving them 0 dkp", name)
-	DiscordF("Error configuring %s's DKP, are they on the DKP sheet, Roster Dump, and are the Guild Notes correctly?", name)
+	DiscordF("Error configuring %s's DKP, are they on the DKP sheet, Roster Dump, and are the Guild Notes correct?", name)
 	roster[name] = &Player{
 		Name:  name,
 		Main:  name,
@@ -1130,3 +1130,46 @@ func DiscordF(format string, v ...interface{}) {
 		l.ErrorF("Failed to send to discord: %s", err.Error())
 	}
 }
+
+func getRecentRosterDump(path string) string {
+	l := LogInit("getRecentRosterDump-commands.go")
+	defer l.End()
+	var files []string
+
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if strings.HasPrefix(filepath.Base(path), configuration.GuildName) {
+			files = append(files, filepath.Base(path))
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	// for _, file := range files {
+	// 	fmt.Println(file)
+	// }
+	return files[len(files)-1] // return last file - should be latest
+	// It looks like files are already sorted by date, we don't need this
+	// var times []time.Time
+	// for _, file := range files {
+	// 	// Remove extension
+	// 	file := strings.TrimSuffix(file, filepath.Ext(file))
+	// 	spltFile := strings.Split(file, "-")
+	// 	if len(spltFile) > 2 { // should always happen
+	// 		timeString := spltFile[1] + "-" + spltFile[2] // only parse the time
+	// 		t, err := time.Parse("20060102-150405", timeString)
+	// 		if err != nil {
+	// 			l.ErrorF("Error parsing time of roster dump: %s", err.Error())
+	// 		}
+	// 		times = append(times, t)
+	// 	}
+	// }
+	// return ""
+}
+
+// // ByTime is for finding the most recent item
+// type ByTime []time.Time
+
+// func (a ByTime) Len() int           { return len(a) }
+// func (a ByTime) Less(i, j int) bool { return a[i].Before(a[j]) }
+// func (a ByTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }

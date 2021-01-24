@@ -34,7 +34,6 @@ type Configuration struct {
 	DiscordLootIcon              string    `json:"DiscordLootIcon"`              // Icon to show for discord rich message
 	InvestigationStartEmoji      string    `json:"InvestigationStartEmoji"`      // Emoji required to start an investigation
 	InvestigationStartMinReq     int       `json:"InvestigationStartMinReq"`     // Amount of emoji required from priv users to start an investigation
-	GuildRosterPath              string    `json:"GuildRosterPath"`              // Path to the guild name_server-timestamp.txt guild dump including alts and offline
 	GuildRaidingRoles            []string  `json:"GuildraidingRoles"`            // Roles that would be a raider, raider+officer/leader/etc
 	RegexIsAlt                   string    `json:"RegexIsAlt"`                   // Regex to find out alt's main
 	RegexIs2ndMain               string    `json:"RegexIs2ndMain"`               // Regex to find out if secondmain and main's name
@@ -58,6 +57,8 @@ type Configuration struct {
 	RegexClosedBid               string    `json:"RegexClosedBid"`               // Regex for detecting a bid being closed
 	RegexOpenBid                 string    `json:"RegexOpenBid"`                 // Regex for detecting a bid being opened
 	RegexTellBid                 string    `json:"RegexTellBid"`                 // Regex for detecting a bid being sent via tell
+	GuildName                    string    `json:"GuildName"`                    // GuildName is the full string of the guild name to determine guild dump files
+	EQBaseFolder                 string    `json:"EQBaseFolder"`                 // Base EQ folder (where eqgame.exe is) to find guild dumps
 }
 
 func init() {
