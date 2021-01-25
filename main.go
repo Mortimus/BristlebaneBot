@@ -933,7 +933,7 @@ func loadRoster(file string) {
 			player.Rank = cMain
 			player.Main = player.Name
 		}
-		if record[3] == "Recruit" {
+		if record[3] == "Recruit" || record[3] == "Member" { // Members are Recruits for bidding purposes
 			player.Rank = cRecruit
 			player.Main = player.Name
 		}
@@ -982,7 +982,7 @@ func updatePlayerDKP(name string, dkp int) {
 		return
 	}
 	l.ErrorF("Cannot find player to update DKP: %s giving them 0 dkp", name)
-	DiscordF("Error configuring %s's DKP, are they on the DKP sheet, Roster Dump, and are the Guild Notes correct?", name)
+	// DiscordF("Error configuring %s's DKP, are they on the DKP sheet, Roster Dump, and are the Guild Notes correct?", name)
 	roster[name] = &Player{
 		Name:  name,
 		Main:  name,
