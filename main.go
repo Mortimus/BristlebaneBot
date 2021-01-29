@@ -2,14 +2,12 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -22,7 +20,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/sheets/v4"
 )
@@ -31,7 +28,7 @@ var bidLock sync.Mutex
 var bids = map[string]*BidItem{}
 var itemDB map[string]int
 var itemLock sync.Mutex
-var discord *discordgo.Session
+
 var investigation Investigation
 var currentTime time.Time // for simulating time
 var archives []string     // stores all known archive files for recall
@@ -41,9 +38,6 @@ var rosterLock sync.Mutex
 // var needsReact map[string]*bool
 // var needsReactLock sync.Mutex
 
-// srv is the global to connect to google sheets
-var srv *sheets.Service
-
 const (
 	cInactive = iota
 	cAlt
@@ -51,101 +45,6 @@ const (
 	cSecondMain
 	cMain
 )
-
-// Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config) *http.Client {
-	l := LogInit("getClient-main.go")
-	defer l.End()
-	// The file token.json stores the user's access and refresh tokens, and is
-	// created automatically when the authorization flow completes for the first
-	// time.
-	// tokFile := "token.json"
-	l.InfoF("Fake loading token from file")
-	tok, err := tokenFromFile("")
-	if err != nil {
-		l.InfoF("Token failed to load, loading from web")
-		tok = getTokenFromWeb(config)
-		l.InfoF("Saving token")
-		saveToken("", tok)
-	}
-	l.DebugF("Using Token: %+v", tok)
-	return config.Client(context.Background(), tok)
-}
-
-// Request a token from the web, then returns the retrieved token.
-func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
-	l := LogInit("getTokenFromWeb-main.go")
-	defer l.End()
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
-	l.InfoF("Requesting user navigate to: %s", authURL)
-	var authCode string
-	if _, err := fmt.Scan(&authCode); err != nil {
-		l.FatalF("Unable to read authorization code: %v", err)
-	}
-
-	tok, err := config.Exchange(context.TODO(), authCode)
-	if err != nil {
-		l.FatalF("Unable to retrieve token from web: %v", err)
-	}
-	l.InfoF("Return token: %+v", tok)
-	return tok
-}
-
-// Retrieves a token from a local file.
-func tokenFromFile(file string) (*oauth2.Token, error) {
-	l := LogInit("tokenFromFile-main.go")
-	defer l.End()
-	// f, err := os.Open(file)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer f.Close()
-	tok := &oauth2.Token{}
-	tok.AccessToken = configuration.AccessToken
-	tok.Expiry = configuration.Expiry
-	tok.RefreshToken = configuration.RefreshToken
-	tok.TokenType = configuration.TokenType
-	// err = json.NewDecoder(f).Decode(tok)
-	l.InfoF("Returning token: %+v", tok)
-	return tok, nil
-}
-
-// Saves a token to a file path.
-func saveToken(path string, token *oauth2.Token) {
-	l := LogInit("saveToken-main.go")
-	defer l.End()
-	// fmt.Printf("Saving credential file to: %s\n", path)
-	// f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	// if err != nil {
-	// 	log.Fatalf("Unable to cache oauth token: %v", err)
-	// }
-	// defer f.Close()
-	// json.NewEncoder(f).Encode(token)
-	configuration.AccessToken = token.AccessToken
-	configuration.Expiry = token.Expiry
-	configuration.RefreshToken = token.RefreshToken
-	configuration.TokenType = token.TokenType
-	l.InfoF("Saved token to configuration")
-	saveConfig()
-}
-
-// Inst is an installed struct for google
-type Inst struct {
-	ClientID                string   `json:"client_id"`
-	ProjectID               string   `json:"project_id"`
-	AuthURI                 string   `json:"auth_uri"`
-	TokenURI                string   `json:"token_uri"`
-	AuthProviderx509CertURL string   `json:"auth_provider_x509_cert_url"`
-	ClientSecret            string   `json:"client_secret"`
-	RedirectURIs            []string `json:"redirect_uris"`
-}
-
-// Gtoken is required by google
-type Gtoken struct {
-	Installed Inst `json:"installed"`
-}
 
 func main() {
 	// Open Configuration and set log output
@@ -227,41 +126,6 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-}
-
-func reactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
-	l := LogInit("reactionAdd-main.go")
-	defer l.End()
-	// fmt.Printf("Reaction Added! Emoji: %#+v MessageID: %s\n", m.Emoji, m.MessageID)
-	// fmt.Printf("isEmoji: %t isArchive: %t\n", isEmoji, isArchive(m.MessageID))
-	if m.Emoji.Name == configuration.InvestigationStartEmoji && isPriviledged(s, m.UserID) && getPrivReactions(s, m.MessageID, configuration.InvestigationStartEmoji) == configuration.InvestigationStartMinReq+1 && isArchive(m.MessageID) {
-		// fmt.Printf("Investigating!\n")
-		// TODO: Make this check if they are officers
-		uploadArchive(m.MessageID)
-	}
-}
-
-func getPrivReactions(s *discordgo.Session, messageID string, emoji string) int {
-	l := LogInit("getReactions-main.go")
-	defer l.End()
-	msg, err := discord.ChannelMessage(configuration.LootChannelID, messageID)
-	if err != nil {
-		l.ErrorF("Error getting message: %s", err.Error())
-		return -1
-	}
-	var privEmoji int
-	for _, react := range msg.Reactions {
-		if react.Emoji.Name == emoji {
-			return react.Count
-		}
-		// TODO: This returns nil sometimes?
-		// if react.Emoji.Name == emoji && isPriviledged(s, react.Emoji.User.ID) {
-		// 	privEmoji++
-		// }
-	}
-	return privEmoji
-	// l.ErrorF("Cannot find emoji")
-	// return -1 // Emoji not found
 }
 
 func bufferedRead(path string, fromStart bool) {
@@ -994,43 +858,6 @@ func updatePlayerDKP(name string, dkp int) {
 	}
 }
 
-func updateDKP() {
-	l := LogInit("lookupPlayer-commands.go")
-	defer l.End()
-	spreadsheetID := configuration.DKPSheetURL
-	readRange := configuration.DKPSummarySheetName
-	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, readRange).Do()
-	if err != nil {
-		l.ErrorF("Unable to retrieve data from sheet: %v", err)
-		return
-	}
-
-	if len(resp.Values) == 0 {
-		l.ErrorF("Cannot read dkp sheet: %v", resp)
-		// log.Println("No data found.")
-	} else {
-		// var lastClass string
-		for _, row := range resp.Values {
-			// if row[0] == "Necromancer" {
-			// 	fmt.Printf("%s: %s\n", row[2], row[6])
-			// }
-			// l.TraceF("Player: %s Target: %s", row[configuration.DKPSRosterSheetPlayerCol], strings.TrimSpace(tar))
-			name := fmt.Sprintf("%s", row[configuration.DKPSummarySheetPlayerCol])
-			name = strings.TrimSpace(name)
-			if name != "" {
-				sDKP := fmt.Sprintf("%s", row[configuration.DKPSummarySheetDKPCol])
-				sDKP = strings.ReplaceAll(sDKP, ",", "")
-				dkp, err := strconv.Atoi(sDKP)
-				if err != nil {
-					l.ErrorF("Error converting DKP to int: %s", err.Error())
-					continue
-				}
-				updatePlayerDKP(name, dkp)
-			}
-		}
-	}
-}
-
 func hasEnoughDKP(name string, amount int) bool {
 	l := LogInit("hasEnoughDKP-commands.go")
 	defer l.End()
@@ -1044,38 +871,6 @@ func hasEnoughDKP(name string, amount int) bool {
 		return true
 	}
 	l.WarnF("%s does not have %d DKP but tried to spend it", name, amount)
-	return false
-}
-
-func isPriviledged(s *discordgo.Session, userID string) bool {
-	// TODO: Fix this
-	return true
-	l := LogInit("isPriviledged-main.go")
-	defer l.End()
-	guildID := configuration.DiscordGuildID
-	l.InfoF("GuildID: %+v\nUserID: %+v", guildID, userID)
-	member, err := s.State.Member(guildID, userID)
-	if err != nil {
-		// if member, err = s.GuildMember(guildID, userID); err != nil {
-		// 	return false, err
-		// }
-		l.ErrorF("Error: %s", err.Error())
-	}
-	l.InfoF("Member: %+v", member)
-	for _, roleID := range member.Roles {
-		role, err := s.State.Role(guildID, roleID)
-		if err != nil {
-			l.ErrorF("Error: %s", err.Error())
-			return false
-		}
-		for _, cRole := range configuration.DiscordPrivRoles {
-			l.InfoF("Crole: %v vs role.Name: %v", cRole, role.Name)
-			if cRole == role.Name {
-				l.InfoF("Role found, authorizing: %s == %s", cRole, role.Name)
-				return true
-			}
-		}
-	}
 	return false
 }
 
@@ -1118,17 +913,6 @@ func getPlayerName(logFile string) string {
 		return "Unknown Player"
 	}
 	return split[2] + "." + split[1]
-}
-
-// DiscordF provides a printf to a discord channel
-func DiscordF(format string, v ...interface{}) {
-	l := LogInit("DiscordF-commands.go")
-	defer l.End()
-	msg := fmt.Sprintf(format, v...)
-	_, err := discord.ChannelMessageSend(configuration.InvestigationChannelID, msg)
-	if err != nil {
-		l.ErrorF("Failed to send to discord: %s", err.Error())
-	}
 }
 
 func getRecentRosterDump(path string) string {
