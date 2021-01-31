@@ -15,6 +15,16 @@ func reactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 	// fmt.Printf("isEmoji: %t isArchive: %t\n", isEmoji, isArchive(m.MessageID))
 	if m.Emoji.Name == configuration.InvestigationStartEmoji && isPriviledged(s, m.UserID) && getPrivReactions(s, m.MessageID, configuration.InvestigationStartEmoji) == configuration.InvestigationStartMinReq+1 && isArchive(m.MessageID) {
 		// fmt.Printf("Investigating!\n")
+		// msg, err := discord.ChannelMessage(configuration.LootChannelID, m.MessageID)
+		// if err != nil {
+		// 	l.ErrorF("Error getting message: %s", err.Error())
+		// 	// return -1
+		// }
+		// for _, react := range msg.Reactions {
+		// 	if react.Emoji.Name == configuration.InvestigationStartEmoji {
+		// 		fmt.Printf("Emoji by %s\n", react.Emoji.User.Username)
+		// 	}
+		// }
 		// TODO: Make this check if they are officers
 		uploadArchive(m.MessageID)
 	}

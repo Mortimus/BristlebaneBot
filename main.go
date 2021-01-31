@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -250,7 +251,7 @@ func parseLogLine(log EqLog) {
 		r, _ := regexp.Compile(configuration.RegexClosedBid) // TODO: Force this to match only the bidmaster
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
-			itemID := isItem(result[1])
+			itemID := isItem(strings.TrimSpace(result[1]))
 			if itemID > 0 { // item numbers are positive
 				if result[2] == "" {
 					// openBid(result[1], 1, itemID)
@@ -272,7 +273,7 @@ func parseLogLine(log EqLog) {
 		r, _ = regexp.Compile(configuration.RegexOpenBid) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
 		result = r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
-			itemID := isItem(result[1])
+			itemID := isItem(strings.TrimSpace(result[1]))
 			if itemID > 0 { // item numbers are positive
 				if result[2] == "" {
 					openBid(result[1], 1, itemID)
@@ -302,9 +303,9 @@ func parseLogLine(log EqLog) {
 			if err != nil {
 				l.ErrorF("Error converting bid to int: %s", result[2])
 			}
-			if isItem(result[1]) > 0 && bid >= 10 && isBidOpen(result[1]) { // item names don't get that long
+			if isItem(strings.TrimSpace(result[1])) > 0 && bid >= 10 && isBidOpen(strings.TrimSpace(result[1])) { // item names don't get that long
 				// addBid(log.source, result[1], bid)
-				bids[result[1]].addBid(log.Source, result[1], bid)
+				bids[strings.TrimSpace(result[1])].addBid(log.Source, strings.TrimSpace(result[1]), bid)
 			}
 			return
 		}
@@ -382,11 +383,17 @@ func (b *BidItem) addBid(user string, item string, amount int) {
 	defer l.End()
 	bidLock.Lock()
 	defer bidLock.Unlock()
-	if !hasEnoughDKP(user, amount) {
-		amount = -5
-	}
-	if _, ok := roster[user]; !ok {
+	if _, ok := roster[user]; !ok { // user doesn't exist, no bids to add
+		l.ErrorF("User %s does not exist, refusing bid", user)
 		return
+	}
+	// TODO: Lookup user's dkp and make sure they can spend (Players can ALWAYS spend 10 dkp)
+	if amount != 0 && amount%configuration.BidIncrements != 0 {
+		l.ErrorF("Bid from %s for %s is not an increment of %d: %d -> Rounding down", user, item, configuration.BidIncrements, amount)
+		amount = roundDown(amount)
+	}
+	if !hasEnoughDKP(user, amount) {
+		amount = getMaxDKP(user)
 	}
 
 	bid := Bid{
@@ -400,16 +407,25 @@ func (b *BidItem) addBid(user string, item string, amount int) {
 	} else {
 		b.Bids = append(b.Bids, bid)
 	}
-	// TODO: Lookup user's dkp and make sure they can spend (Players can ALWAYS spend 10 dkp)
-	if amount%configuration.BidIncrements != 0 {
-		l.ErrorF("Bid from %s for %s is not an increment of %d: %d -> Skipping Bid", user, item, configuration.BidIncrements, amount)
-		return
-	}
+
 	// b.Bids = append(b.Bids, bid)
 	l.InfoF("Adding Bid: %#+v\n", bid)
 }
 
+func roundDown(n int) int {
+	f := float64(n)
+	fAmount := float64(configuration.BidIncrements)
+	rounded := int(math.Round(f/fAmount) * fAmount)
+	if rounded > n {
+		return rounded - configuration.BidIncrements
+	}
+	return rounded
+}
+
 func (b *BidItem) bidderExists(user string) int {
+	l := LogInit("bidderExists-main.go")
+	defer l.End()
+	l.InfoF("Checking if bidder %s exists in %#+v", user, b)
 	for k, bidder := range b.Bids {
 		if bidder.Bidder == user {
 			return k
@@ -872,6 +888,21 @@ func hasEnoughDKP(name string, amount int) bool {
 	}
 	l.WarnF("%s does not have %d DKP but tried to spend it", name, amount)
 	return false
+}
+
+func getMaxDKP(name string) int {
+	l := LogInit("getMaxDKP-commands.go")
+	defer l.End()
+	rosterLock.Lock()
+	defer rosterLock.Unlock()
+	if _, ok := roster[name]; ok {
+		if roster[name].DKP < 10 { // You can always spend 10dkp
+			return 10
+		}
+		return roster[name].DKP
+	}
+	l.ErrorF("Cannot obtain max DKP for %s", name)
+	return -5
 }
 
 // func addReact(msgID string) {
