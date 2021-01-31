@@ -102,7 +102,7 @@ func main() {
 		l.FatalF("Error creating Discord session: %v", err)
 	}
 	defer discord.Close()
-	// discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
+	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 	// updateDKP()
 	// dumpPlayers()
 	// fmt.Println(itemDB["Vyemm's Fang"])
@@ -409,7 +409,7 @@ func (b *BidItem) addBid(user string, item string, amount int) {
 	}
 
 	// b.Bids = append(b.Bids, bid)
-	l.InfoF("Adding Bid: %#+v\n", bid)
+	l.InfoF("Adding Bid: Player: %s Main: %s MaxDKP: %d\n", bid.Player.Name, bid.Player.Main, bid.Player.DKP)
 }
 
 func roundDown(n int) int {
