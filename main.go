@@ -60,7 +60,6 @@ func main() {
 	itemDB = loaditemDB(configuration.LucyItems)
 	archives = getArchiveList()
 	// loadRoster(configuration.GuildRosterPath)
-	loadRoster(configuration.EQBaseFolder + "/" + getRecentRosterDump(configuration.EQBaseFolder))
 
 	gtoken := &Gtoken{
 		Installed: Inst{
@@ -106,6 +105,7 @@ func main() {
 	// updateDKP()
 	// dumpPlayers()
 	// fmt.Println(itemDB["Vyemm's Fang"])
+	loadRoster(configuration.EQBaseFolder + "/" + getRecentRosterDump(configuration.EQBaseFolder)) // needs to run AFTER discord is initialized
 	go bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
 
 	// // Register the messageCreate func as a callback for MessageCreate events.
@@ -963,6 +963,10 @@ func getRecentRosterDump(path string) string {
 	// for _, file := range files {
 	// 	fmt.Println(file)
 	// }
+	if !isDumpOutOfDate(files[len(files)-1]) {
+		DiscordF("**Guild dump %s is out of date, this needs updated with ALL members (including offline and alts) before bidbot is ran**", files[len(files)-1])
+	}
+
 	return files[len(files)-1] // return last file - should be latest
 	// It looks like files are already sorted by date, we don't need this
 	// var times []time.Time
@@ -980,6 +984,27 @@ func getRecentRosterDump(path string) string {
 	// 	}
 	// }
 	// return ""
+}
+
+func isDumpOutOfDate(dump string) bool {
+	l := LogInit("isDumpOutOfDate-commands.go")
+	defer l.End()
+	// Vets of Norrath_aradune-20210124-083635
+	// location, err := time.LoadLocation("America/Chicago")
+	// if err != nil {
+	// 	l.ErrorF("Error parsing tz : %s", err.Error())
+	// }
+	t := time.Now()
+	zone, _ := t.Zone()
+	name := strings.Split(dump, "-") // seperate by hypen so [1] is the day we care about
+	format := "20060102MST"
+	logDate, err := time.Parse(format, name[1]+zone)
+	// logDate = logDate.In(location)
+	if err != nil {
+		l.ErrorF("Error parsing time of guild dump : %s", err.Error())
+	}
+	l.InfoF("LogDate: %s before Now: %s After: %s", logDate.String(), time.Now().String(), time.Now().Add(-24*time.Hour).String())
+	return logDate.Before(time.Now()) && logDate.After(time.Now().Add(-24*time.Hour))
 }
 
 // // ByTime is for finding the most recent item
