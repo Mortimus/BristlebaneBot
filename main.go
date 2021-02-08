@@ -251,19 +251,21 @@ func parseLogLine(log EqLog) {
 		r, _ := regexp.Compile(configuration.RegexClosedBid) // TODO: Force this to match only the bidmaster
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
-			itemID := isItem(strings.TrimSpace(result[1]))
+			itemName := strings.TrimSpace(result[1])
+			itemName = strings.ToLower(itemName)
+			itemID := isItem(itemName)
 			if itemID > 0 { // item numbers are positive
 				if result[2] == "" {
 					// openBid(result[1], 1, itemID)
-					if _, ok := bids[result[1]]; ok { // Verify bid open, then set end time to start time to close it
-						bids[result[1]].End = bids[result[1]].Start // force the bid to show as done
+					if _, ok := bids[itemName]; ok { // Verify bid open, then set end time to start time to close it
+						bids[itemName].End = bids[itemName].Start // force the bid to show as done
 					}
 				} else {
 					count, err := strconv.Atoi(result[2])
 					if err != nil {
 						l.ErrorF("Error converting item count to int: %s", err.Error())
 					}
-					openBid(result[1], count, itemID)
+					openBid(itemName, count, itemID)
 				}
 
 			}
@@ -273,16 +275,18 @@ func parseLogLine(log EqLog) {
 		r, _ = regexp.Compile(configuration.RegexOpenBid) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
 		result = r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
-			itemID := isItem(strings.TrimSpace(result[1]))
+			itemName := strings.TrimSpace(result[1])
+			itemName = strings.ToLower(itemName)
+			itemID := isItem(itemName)
 			if itemID > 0 { // item numbers are positive
 				if result[2] == "" {
-					openBid(result[1], 1, itemID)
+					openBid(itemName, 1, itemID)
 				} else {
 					count, err := strconv.Atoi(result[2])
 					if err != nil {
 						l.ErrorF("Error converting item count to int: %s", err.Error())
 					}
-					openBid(result[1], count, itemID)
+					openBid(itemName, count, itemID)
 				}
 
 			}
@@ -303,9 +307,11 @@ func parseLogLine(log EqLog) {
 			if err != nil {
 				l.ErrorF("Error converting bid to int: %s", result[2])
 			}
-			if isItem(strings.TrimSpace(result[1])) > 0 && bid >= 10 && isBidOpen(strings.TrimSpace(result[1])) { // item names don't get that long
+			itemName := strings.TrimSpace(result[1])
+			itemName = strings.ToLower(itemName)
+			if isItem(strings.TrimSpace(itemName)) > 0 && bid >= 10 && isBidOpen(strings.TrimSpace(itemName)) { // item names don't get that long
 				// addBid(log.source, result[1], bid)
-				bids[strings.TrimSpace(result[1])].addBid(log.Source, strings.TrimSpace(result[1]), bid)
+				bids[strings.TrimSpace(itemName)].addBid(log.Source, strings.TrimSpace(itemName), bid)
 			}
 			return
 		}
@@ -643,7 +649,9 @@ func loaditemDB(file string) map[string]int {
 		if err != nil {
 			log.Fatal(err)
 		}
-		itemDB[record[1]] = itemID
+		// remove case from item since lucy has some case issues
+		name := strings.ToLower(record[1])
+		itemDB[name] = itemID
 		// fmt.Printf("Item: %s ID: %d\n", record[1], itemID)
 		// fmt.Println(itemDB[record[1]])
 	}
@@ -656,6 +664,7 @@ func isItem(name string) int {
 	defer l.End()
 	itemLock.Lock()
 	defer itemLock.Unlock()
+	name = strings.ToLower(name) // Make it lowercase to match database
 	if _, ok := itemDB[name]; ok {
 		return itemDB[name]
 	}
