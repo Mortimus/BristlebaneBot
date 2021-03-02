@@ -398,8 +398,8 @@ func (b *BidItem) addBid(user string, item string, amount int) {
 		l.ErrorF("Bid from %s for %s is not an increment of %d: %d -> Rounding down", user, item, configuration.BidIncrements, amount)
 		amount = roundDown(amount)
 	}
-	if !hasEnoughDKP(user, amount) {
-		amount = getMaxDKP(user)
+	if !hasEnoughDKP(roster[user].Main, amount) { // this works but roster should have their dkp
+		amount = getMaxDKP(roster[user].Main)
 	}
 
 	bid := Bid{
