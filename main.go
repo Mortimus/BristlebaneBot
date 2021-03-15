@@ -585,14 +585,21 @@ func sortBids(bids []Bid) []Bid {
 			inactives = append(inactives, bid)
 		}
 	}
+	if configuration.IsOffNight {
+		mains = append(mains, secondmains...)
+	}
 	sort.Sort(sort.Reverse(ByBid(mains)))
-	sort.Sort(sort.Reverse(ByBid(secondmains)))
+	if !configuration.IsOffNight {
+		sort.Sort(sort.Reverse(ByBid(secondmains)))
+	}
 	sort.Sort(sort.Reverse(ByBid(recruits)))
 	sort.Sort(sort.Reverse(ByBid(alts)))
 	sort.Sort(sort.Reverse(ByBid(inactives)))
 	var winners []Bid
 	winners = append(winners, mains...)
-	winners = append(winners, secondmains...)
+	if !configuration.IsOffNight {
+		winners = append(winners, secondmains...)
+	}
 	winners = append(winners, recruits...)
 	winners = append(winners, alts...)
 	winners = append(winners, inactives...)
