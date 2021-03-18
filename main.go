@@ -309,13 +309,22 @@ func parseLogLine(log EqLog) {
 			}
 			itemName := strings.TrimSpace(result[1])
 			itemName = strings.ToLower(itemName)
-			if isItem(strings.TrimSpace(itemName)) > 0 && bid >= 10 && isBidOpen(strings.TrimSpace(itemName)) { // item names don't get that long
-				// addBid(log.source, result[1], bid)
-				bids[strings.TrimSpace(itemName)].addBid(log.Source, strings.TrimSpace(itemName), bid)
+			if isItem(strings.TrimSpace(itemName)) > 0 && isBidOpen(strings.TrimSpace(itemName)) { // item names don't get that long
+				if bid == 0 && bids[strings.TrimSpace(itemName)].bidderExists(log.Source) != -1 { // Bidder wants to cancel
+					l.InfoF("%s is trying to remove their bid\n", log.Source)
+					bids[strings.TrimSpace(itemName)].Bids = removeFromSlice(bids[strings.TrimSpace(itemName)].Bids, bids[strings.TrimSpace(itemName)].bidderExists(log.Source))
+				}
+				if bid >= 10 {
+					bids[strings.TrimSpace(itemName)].addBid(log.Source, strings.TrimSpace(itemName), bid)
+				}
 			}
 			return
 		}
 	}
+}
+
+func removeFromSlice(slice []Bid, s int) []Bid {
+	return append(slice[:s], slice[s+1:]...)
 }
 
 func openBid(item string, count int, id int) {
