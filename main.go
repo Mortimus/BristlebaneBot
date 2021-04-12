@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -20,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	everquest "github.com/Mortimus/goEverquest"
 	"github.com/bwmarrin/discordgo"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/sheets/v4"
@@ -27,7 +27,9 @@ import (
 
 var bidLock sync.Mutex
 var bids = map[string]*BidItem{}
-var itemDB map[string]int
+
+// var itemDB map[string]int
+var itemDB everquest.ItemDB
 var itemLock sync.Mutex
 
 var investigation Investigation
@@ -35,6 +37,8 @@ var currentTime time.Time // for simulating time
 var archives []string     // stores all known archive files for recall
 var roster = map[string]*Player{}
 var rosterLock sync.Mutex
+
+var ChatLogs chan everquest.EqLog
 
 // var needsReact map[string]*bool
 // var needsReactLock sync.Mutex
@@ -57,7 +61,8 @@ func main() {
 	log.SetOutput(configFile)
 	l := LogInit("main-main.go")
 	defer l.End()
-	itemDB = loaditemDB(configuration.LucyItems)
+	// itemDB = loaditemDB(configuration.LucyItems)
+	itemDB.LoadFromFile("items.txt")
 	archives = getArchiveList()
 	// loadRoster(configuration.GuildRosterPath)
 
@@ -106,7 +111,9 @@ func main() {
 	// dumpPlayers()
 	// fmt.Println(itemDB["Vyemm's Fang"])
 	loadRoster(configuration.EQBaseFolder + "/" + getRecentRosterDump(configuration.EQBaseFolder)) // needs to run AFTER discord is initialized
-	go bufferedRead(configuration.EQLogPath, configuration.ReadEntireLog)
+	ChatLogs = make(chan everquest.EqLog)
+	go everquest.BufferedLogRead(configuration.EQLogPath, configuration.ReadEntireLog, configuration.LogPollRate, ChatLogs)
+	go parseLogs()
 
 	// // Register the messageCreate func as a callback for MessageCreate events.
 	// dg.AddHandler(messageCreate)
@@ -129,116 +136,31 @@ func main() {
 	<-sc
 }
 
-func bufferedRead(path string, fromStart bool) {
-	l := LogInit("bufferedRead-main.go")
+func printHUD() {
+	fmt.Print("\033[H\033[2J") // clear the terminal should only work in windows
+	fmt.Printf("Time: %s\n", currentTime.String())
+	fmt.Printf("Guild Members: %d\n", len(roster))
+	fmt.Printf("SecondMainsBidAsMains: %t\tSecondMainMaxBidAsMain: %d\n", configuration.SecondMainsBidAsMains, configuration.SecondMainAsMainMaxBid)
+	fmt.Printf("Open Bids: %d\n", len(bids))
+	i := 1
+	for _, bid := range bids {
+		fmt.Printf("#%d: %s\n", i, bid.Item)
+		i++
+	}
+}
+
+func parseLogs() {
+	l := LogInit("parseLogs-main.go")
 	defer l.End()
-	file, err := os.Open(path)
-	if err != nil {
-		l.ErrorF("error opening buffered file: %v", err)
-		return
-	}
-	if !fromStart {
-		file.Seek(0, 2) // move to end of file
-	}
-	bufferedReader := bufio.NewReader(file)
-	r, _ := regexp.Compile(configuration.EQBaseLogLine)
-	for {
+	l.InfoF("Parsing logs")
+	printHUD()
+	for msgs := range ChatLogs {
 		checkClosedBids()
-		str, err := bufferedReader.ReadString('\n')
-		if err == io.EOF {
-			// dumpBids()
-			time.Sleep(time.Duration(configuration.LogPollRate) * time.Second) // 1 eq tick = 6 seconds
-			continue
-		}
-		if err != nil {
-			l.ErrorF("error opening buffered file: %v", err)
-			return
-		}
-
-		results := r.FindAllStringSubmatch(str, -1) // this really needs converted to single search
-		if results == nil {
-			time.Sleep(3 * time.Second)
-		} else {
-			readLogLine(results)
-		}
+		parseLogLine(msgs)
 	}
 }
 
-func readLogLine(results [][]string) {
-	l := LogInit("readLogLine-main.go")
-	defer l.End()
-	t := eqTimeConv(results[0][1])
-	msg := strings.TrimSuffix(results[0][2], "\r")
-	log := &EqLog{
-		T:       t,
-		Msg:     msg,
-		Channel: getChannel(msg),
-		Source:  getSource(msg),
-	}
-	parseLogLine(*log)
-}
-
-func eqTimeConv(t string) time.Time {
-	l := LogInit("eqTimeConv-main.go")
-	defer l.End()
-	// Get local time zone
-	localT := time.Now()
-	zone, _ := localT.Zone()
-	// fmt.Println(zone, offset)
-
-	// Parse Time
-	cTime, err := time.Parse("Mon Jan 02 15:04:05 2006 MST", t+" "+zone)
-	if err != nil {
-		l.ErrorF("Error parsing time, defaulting to now: %s\n", err.Error())
-		cTime = time.Now()
-	}
-	return cTime
-}
-
-// EqLog represents a single line of eq logging
-type EqLog struct {
-	T       time.Time `json:"Time"`
-	Msg     string    `json:"Message"`
-	Channel string    `json:"Channel"`
-	Source  string    `json:"Source"`
-}
-
-func getChannel(msg string) string {
-	l := LogInit("getChannel-main.go")
-	defer l.End()
-	m := strings.Split(msg, " ")
-	if len(m) > 4 {
-		if m[3] == "guild," || m[4] == "guild," {
-			return "guild"
-		}
-		if m[3] == "group," || m[4] == "group," {
-			return "group"
-		}
-		if m[3] == "raid," || m[4] == "raid," {
-			return "raid"
-		}
-		if m[1] == "tells" && m[2] == "you," {
-			return "tell"
-		}
-		// fmt.Printf("Default: %s\n", m[2])
-		return "system"
-	}
-	if len(m) > 1 && m[1] == "tells" {
-		// return m[3]
-		return m[0]
-		// return strings.TrimRight(m[3], ",")
-	}
-	return "system"
-}
-
-func getSource(msg string) string {
-	l := LogInit("getSource-main.go")
-	defer l.End()
-	m := strings.Split(msg, " ")
-	return m[0]
-}
-
-func parseLogLine(log EqLog) {
+func parseLogLine(log everquest.EqLog) {
 	l := LogInit("getSource-main.go")
 	defer l.End()
 	currentTime = log.T
@@ -267,7 +189,9 @@ func parseLogLine(log EqLog) {
 					}
 					openBid(itemName, count, itemID)
 				}
-
+			} else {
+				l.WarnF("Cannot find item %s has id %d\n", itemName, itemID)
+				DiscordF("**[ERROR] Cannot find item %s has id %d, bids will NOT be recorded. Item list needs updated and someone needs to manually take bids.\n", itemName, itemID)
 			}
 			return
 		}
@@ -288,7 +212,9 @@ func parseLogLine(log EqLog) {
 					}
 					openBid(itemName, count, itemID)
 				}
-
+			} else {
+				l.WarnF("Cannot find item %s has id %d\n", itemName, itemID)
+				DiscordF("**[ERROR] Cannot find item %s has id %d, bids will NOT be recorded. Item list needs updated and someone needs to manually take bids.**\n", itemName, itemID)
 			}
 			return
 		}
@@ -321,6 +247,16 @@ func parseLogLine(log EqLog) {
 			return
 		}
 	}
+	if log.Channel == "system" {
+		if strings.Contains(log.Msg, "Outputfile") {
+			outputName := log.Msg[21:] // Filename Outputfile sent data to
+			if strings.Contains(log.Msg, "RaidRoster") {
+				l.InfoF("Raid Dump exported, uploading")
+				// upload to discord
+				uploadRaidDump(outputName)
+			}
+		}
+	}
 }
 
 func removeFromSlice(slice []Bid, s int) []Bid {
@@ -339,11 +275,14 @@ func openBid(item string, count int, id int) {
 	l.InfoF("Opening bid for: %s x%d\n", item, count)
 	updateDKP() // update player dkp with bid
 	bids[item] = &BidItem{}
+	bids[item].SecondMainsBidAsMains = configuration.SecondMainsBidAsMains   // For investigation purposes and debug replay
+	bids[item].SecondMainAsMainMaxBid = configuration.SecondMainAsMainMaxBid // For investigation purposes and debug replay
 	bids[item].Item = item
 	bids[item].Count = count
 	bids[item].ID = id
 	bids[item].URL = configuration.LucyURLPrefix + strconv.Itoa(id)
 	bids[item].startBid()
+	printHUD()
 	// lookup item id
 }
 
@@ -366,15 +305,19 @@ type Bid struct {
 
 // BidItem defines bids on an item
 type BidItem struct {
-	Item              string        `json:"Item"`
-	ID                int           `json:"ID"`
-	URL               string        `json:"URL"`
-	Count             int           `json:"Count"`
-	Bids              []Bid         `json:"Bids"`
-	Start             time.Time     `json:"Start"`
-	End               time.Time     `json:"End"`
-	Winners           []Winner      `json:"Winners"`
-	InvestigationLogs Investigation `json:"InvestigationLogs"`
+	Item                   string        `json:"Item"`
+	ID                     int           `json:"ID"`
+	URL                    string        `json:"URL"`
+	Count                  int           `json:"Count"`
+	Bids                   []Bid         `json:"Bids"`
+	Start                  time.Time     `json:"Start"`
+	End                    time.Time     `json:"End"`
+	Winners                []Winner      `json:"Winners"`
+	InvestigationLogs      Investigation `json:"InvestigationLogs"`
+	SecondMainsBidAsMains  bool          `json:"SecondMainsBidAsMains"`
+	SecondMainAsMainMaxBid int           `json:"SecondMainAsMainMaxBid"`
+	RollOff                bool          `json:"RollOff"`
+	RollOffWinner          string        `json:"RollOffWinner"` // Added post win
 }
 
 func (b *BidItem) startBid() {
@@ -489,7 +432,7 @@ func (b *BidItem) closeBid() {
 
 	embed := discordgo.MessageEmbed{
 		URL:    b.URL,
-		Title:  fmt.Sprintf("%s", b.Item),
+		Title:  b.Item,
 		Type:   discordgo.EmbedTypeRich,
 		Fields: fields,
 		Footer: &footer,
@@ -507,6 +450,7 @@ func (b *BidItem) closeBid() {
 	b.InvestigationLogs = investigation
 	// Write bid to archive
 	writeArchive(dMsg.ID, *b)
+	printHUD()
 }
 
 // Winner is the user who won items
@@ -542,7 +486,8 @@ func (b *BidItem) getWinners(count int) []Winner {
 					ties++
 				}
 			}
-			count = ties // show winners == amount of ties to imply roll off
+			count = ties     // show winners == amount of ties to imply roll off
+			b.RollOff = true // for logging/replay purposes
 			discord.ChannelMessageSend(configuration.LootChannelID, "Roll off required!")
 		}
 	}
@@ -574,6 +519,8 @@ func (b *BidItem) getWinners(count int) []Winner {
 }
 
 func sortBids(bids []Bid) []Bid {
+	l := LogInit("sortBids-main.go")
+	defer l.End()
 	var mains []Bid
 	var secondmains []Bid
 	var recruits []Bid
@@ -594,11 +541,27 @@ func sortBids(bids []Bid) []Bid {
 			inactives = append(inactives, bid)
 		}
 	}
-	if configuration.IsOffNight {
-		mains = append(mains, secondmains...)
+	if len(mains) == 0 {
+		l.InfoF("No mains bid on this item")
+	}
+	if len(mains) > 0 && configuration.SecondMainsBidAsMains { // we don't need to do anything if no mains bid
+		if configuration.SecondMainAsMainMaxBid > 0 { // We need to lower their bids that are > 200
+			// looping like this uses a copy I think so we need to make a new slice
+			var fixedSMains []Bid
+			for _, sMain := range secondmains {
+				if sMain.Amount > configuration.SecondMainAsMainMaxBid { // They bid too much, so lower it to the max allowed
+					l.InfoF("Secondmain %s bid more than the max allowed of %s, setting to max\n", sMain.Player, configuration.SecondMainAsMainMaxBid)
+					sMain.Amount = configuration.SecondMainAsMainMaxBid
+				}
+				fixedSMains = append(fixedSMains, sMain)
+			}
+			mains = append(mains, fixedSMains...)
+		} else {
+			mains = append(mains, secondmains...)
+		}
 	}
 	sort.Sort(sort.Reverse(ByBid(mains)))
-	if !configuration.IsOffNight {
+	if !configuration.SecondMainsBidAsMains {
 		sort.Sort(sort.Reverse(ByBid(secondmains)))
 	}
 	sort.Sort(sort.Reverse(ByBid(recruits)))
@@ -606,7 +569,7 @@ func sortBids(bids []Bid) []Bid {
 	sort.Sort(sort.Reverse(ByBid(inactives)))
 	var winners []Bid
 	winners = append(winners, mains...)
-	if !configuration.IsOffNight {
+	if !configuration.SecondMainsBidAsMains {
 		winners = append(winners, secondmains...)
 	}
 	winners = append(winners, recruits...)
@@ -630,62 +593,17 @@ func dumpBids() {
 	}
 }
 
-func loaditemDB(file string) map[string]int {
-	l := LogInit("loaditemDB-main.go")
-	defer l.End()
-	csvfile, err := os.Open(file)
-	if err != nil {
-		log.Fatalln("Couldn't open the csv file", err)
-	}
-	defer csvfile.Close()
-	itemDB := make(map[string]int)
-
-	// Parse the file
-	r := csv.NewReader(csvfile)
-	//r := csv.NewReader(bufio.NewReader(csvfile))
-
-	// Iterate through the records
-	headerSkipped := false
-	for {
-		// Read each record from csv
-		record, err := r.Read()
-		if !headerSkipped {
-			headerSkipped = true
-			// skip header line
-			continue
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-		// fmt.Printf("ID: %s Name: %s\n", record[0], record[1])
-		itemID, err := strconv.Atoi(record[0])
-		if err != nil {
-			log.Fatal(err)
-		}
-		// remove case from item since lucy has some case issues
-		name := strings.ToLower(record[1])
-		itemDB[name] = itemID
-		// fmt.Printf("Item: %s ID: %d\n", record[1], itemID)
-		// fmt.Println(itemDB[record[1]])
-	}
-	l.InfoF("Loaded itemDB")
-	return itemDB
-}
-
 func isItem(name string) int {
 	l := LogInit("isItem-main.go")
 	defer l.End()
-	itemLock.Lock()
-	defer itemLock.Unlock()
-	name = strings.ToLower(name) // Make it lowercase to match database
-	if _, ok := itemDB[name]; ok {
-		return itemDB[name]
-	}
-	l.WarnF("Cannot find item: %s\n", name)
-	return -1
+	// itemLock.Lock()
+	// defer itemLock.Unlock()
+	// name = strings.ToLower(name) // Make it lowercase to match database
+	// if _, ok := itemDB[name]; ok {
+	// 	return itemDB[name]
+	// }
+	// l.WarnF("Cannot find item: %s\n", name)
+	return itemDB.FindIDByName(name)
 }
 
 func checkClosedBids() {
@@ -717,14 +635,14 @@ func writeArchive(name string, data BidItem) {
 
 // Investigation is raw logs during a specified time-frame for verifying failed bids
 type Investigation struct {
-	Messages []EqLog `json:"Messages"`
+	Messages []everquest.EqLog `json:"Messages"`
 }
 
-func (i *Investigation) addLog(l EqLog) {
+func (i *Investigation) addLog(l everquest.EqLog) {
 	i.Messages = append(i.Messages, l)
 	if len(i.Messages) > configuration.InvestigationLogLimitMinutes { // remove the oldest log
 		copy(i.Messages[0:], i.Messages[1:])
-		i.Messages[len(i.Messages)-1] = EqLog{} // or the zero value of T
+		i.Messages[len(i.Messages)-1] = everquest.EqLog{} // or the zero value of T
 		i.Messages = i.Messages[:len(i.Messages)-1]
 	}
 }
@@ -745,6 +663,19 @@ func uploadArchive(id string) {
 		discord.ChannelMessageSend(configuration.InvestigationChannelID, "Error uploading investigation: "+id)
 	} else {
 		discord.ChannelFileSend(configuration.InvestigationChannelID, id+".json", file)
+	}
+}
+
+func uploadRaidDump(filename string) {
+	l := LogInit("uploadArchive-main.go")
+	defer l.End()
+	file, err := os.Open(configuration.EQBaseFolder + "/" + filename)
+	if err != nil {
+		l.ErrorF("Error finding Raid Dump: %s", err.Error())
+		discord.ChannelMessageSend(configuration.InvestigationChannelID, "Error uploading Raid Dump: "+filename)
+	} else {
+		DiscordF("%s uploaded a raid dump at %s", getPlayerName(configuration.EQLogPath), time.Now().String())
+		discord.ChannelFileSend(configuration.InvestigationChannelID, filename, file)
 	}
 }
 
@@ -851,11 +782,11 @@ func loadRoster(file string) {
 	l.InfoF("Loaded Roster")
 }
 
-func dumpPlayers() {
-	for _, p := range roster {
-		fmt.Printf("%#+v\n", p)
-	}
-}
+// func dumpPlayers() {
+// 	for _, p := range roster {
+// 		fmt.Printf("%#+v\n", p)
+// 	}
+// }
 
 // Player is represented by Name, Level, Class, Rank, Alt, Last On, Zone, Note, Tribute Status, Unk_1, Unk_2, Last Donation, Private Note
 type Player struct {

@@ -110,7 +110,7 @@ type Gtoken struct {
 }
 
 func updateDKP() {
-	l := LogInit("lookupPlayer-commands.go")
+	l := LogInit("updateDKP-commands.go")
 	defer l.End()
 	spreadsheetID := configuration.DKPSheetURL
 	readRange := configuration.DKPSummarySheetName
@@ -126,10 +126,6 @@ func updateDKP() {
 	} else {
 		// var lastClass string
 		for _, row := range resp.Values {
-			// if row[0] == "Necromancer" {
-			// 	fmt.Printf("%s: %s\n", row[2], row[6])
-			// }
-			// l.TraceF("Player: %s Target: %s", row[configuration.DKPSRosterSheetPlayerCol], strings.TrimSpace(tar))
 			name := fmt.Sprintf("%s", row[configuration.DKPSummarySheetPlayerCol])
 			name = strings.TrimSpace(name)
 			if name != "" {

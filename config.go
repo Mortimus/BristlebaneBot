@@ -60,7 +60,8 @@ type Configuration struct {
 	GuildName                    string    `json:"GuildName"`                    // GuildName is the full string of the guild name to determine guild dump files
 	EQBaseFolder                 string    `json:"EQBaseFolder"`                 // Base EQ folder (where eqgame.exe is) to find guild dumps
 	BidsOnlyCloseAutomatically   bool      `json:"BidsOnlyCloseAutomatically"`   // If true, bids close by time, if false it closes by message
-	IsOffNight                   bool      `json:"IsOffNight"`                   // If it's an offnight then secondmains count as mains
+	SecondMainsBidAsMains        bool      `json:"SecondMainsBidAsMains"`        // If it's an offnight then secondmains count as mains, or pop on with a max bid
+	SecondMainAsMainMaxBid       int       `json:"SecondMainAsMainMaxBid"`       // Secondmain counts as a main but has a max bid of this value
 }
 
 func init() {
