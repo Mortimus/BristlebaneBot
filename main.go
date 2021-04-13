@@ -40,6 +40,8 @@ var rosterLock sync.Mutex
 
 var ChatLogs chan everquest.EqLog
 
+var currentZone string
+
 // var needsReact map[string]*bool
 // var needsReactLock sync.Mutex
 
@@ -139,6 +141,7 @@ func main() {
 func printHUD() {
 	fmt.Print("\033[H\033[2J") // clear the terminal should only work in windows
 	fmt.Printf("Time: %s\n", currentTime.String())
+	fmt.Printf("Player: %s\tZone: %s\n", getPlayerName(configuration.EQLogPath), currentZone)
 	fmt.Printf("Guild Members: %d\n", len(roster))
 	fmt.Printf("SecondMainsBidAsMains: %t\tSecondMainMaxBidAsMain: %d\n", configuration.SecondMainsBidAsMains, configuration.SecondMainAsMainMaxBid)
 	fmt.Printf("Open Bids: %d\n", len(bids))
@@ -177,17 +180,8 @@ func parseLogLine(log everquest.EqLog) {
 			itemName = strings.ToLower(itemName)
 			itemID := isItem(itemName)
 			if itemID > 0 { // item numbers are positive
-				if result[2] == "" {
-					// openBid(result[1], 1, itemID)
-					if _, ok := bids[itemName]; ok { // Verify bid open, then set end time to start time to close it
-						bids[itemName].End = bids[itemName].Start // force the bid to show as done
-					}
-				} else {
-					count, err := strconv.Atoi(result[2])
-					if err != nil {
-						l.ErrorF("Error converting item count to int: %s", err.Error())
-					}
-					openBid(itemName, count, itemID)
+				if _, ok := bids[itemName]; ok { // Verify bid open, then set end time to start time to close it
+					bids[itemName].End = bids[itemName].Start // force the bid to show as done
 				}
 			} else {
 				l.WarnF("Cannot find item %s has id %d\n", itemName, itemID)
@@ -206,7 +200,7 @@ func parseLogLine(log everquest.EqLog) {
 				if result[2] == "" {
 					openBid(itemName, 1, itemID)
 				} else {
-					count, err := strconv.Atoi(result[2])
+					count, err := strconv.Atoi(result[2][1:])
 					if err != nil {
 						l.ErrorF("Error converting item count to int: %s", err.Error())
 					}
@@ -256,6 +250,9 @@ func parseLogLine(log everquest.EqLog) {
 				uploadRaidDump(outputName)
 			}
 		}
+		if strings.Contains(log.Msg, "You have entered ") && !strings.Contains(log.Msg, "function.") { // You have entered Vex Thal. NOT You have entered an area where levitation effects do not function.
+			currentZone = log.Msg[16 : len(log.Msg)-1]
+		}
 	}
 }
 
@@ -277,6 +274,7 @@ func openBid(item string, count int, id int) {
 	bids[item] = &BidItem{}
 	bids[item].SecondMainsBidAsMains = configuration.SecondMainsBidAsMains   // For investigation purposes and debug replay
 	bids[item].SecondMainAsMainMaxBid = configuration.SecondMainAsMainMaxBid // For investigation purposes and debug replay
+	bids[item].Zone = currentZone
 	bids[item].Item = item
 	bids[item].Count = count
 	bids[item].ID = id
@@ -318,6 +316,7 @@ type BidItem struct {
 	SecondMainAsMainMaxBid int           `json:"SecondMainAsMainMaxBid"`
 	RollOff                bool          `json:"RollOff"`
 	RollOffWinner          string        `json:"RollOffWinner"` // Added post win
+	Zone                   string        `json:"Zone"`
 }
 
 func (b *BidItem) startBid() {
@@ -427,7 +426,7 @@ func (b *BidItem) closeBid() {
 	// var provider discordgo.MessageEmbedProvider
 	// provider.Name = sig.String()
 	var footer discordgo.MessageEmbedFooter
-	footer.Text = getPlayerName(configuration.EQLogPath) // TODO: Pull this from the log being monitored
+	footer.Text = getPlayerName(configuration.EQLogPath) + " - " + b.Zone
 	footer.IconURL = configuration.DiscordLootIcon
 
 	embed := discordgo.MessageEmbed{
