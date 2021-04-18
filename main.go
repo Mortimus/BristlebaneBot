@@ -223,7 +223,7 @@ func parseLogLine(log everquest.EqLog) {
 
 	}
 	if log.Channel == "say" { // Guzz says, 'Hail, a spell jammer'
-		if strings.Contains(log.Msg, "Hail, A Planar Projection") {
+		if strings.Contains(log.Msg, "Hail, A Planar Projection") || strings.Contains(log.Msg, "Hail, Tarkil Adan") || strings.Contains(log.Msg, "Hail, Essence of Fire") || strings.Contains(log.Msg, "Hail, Essence of Water") || strings.Contains(log.Msg, "Hail, Essence of Earth") || strings.Contains(log.Msg, "Hail, Essence of Air") {
 			DiscordF(configuration.FlagChannelID, "%s got the flag from %s\n", log.Source, currentZone)
 		}
 	}
