@@ -272,9 +272,10 @@ func parseLogLine(log everquest.EqLog) {
 		r, _ := regexp.Compile(configuration.RegexLoot)
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
-			if strings.Contains(result[2], "Spell: ") { // TODO: Include "Ancient: "
+			if strings.Contains(result[2], "Spell: ") || strings.Contains(result[2], "Ancient: ") { // TODO: Include "Ancient: "
 				// TODO: Lookup who needs the spell and add it to the loot message
 				cleanSpellName := strings.Replace(result[2], "Spell: ", "", 1)
+				cleanSpellName = strings.Replace(cleanSpellName, "Ancient: ", "Ancient ", 1)
 				spellID := spellDB.FindIDByName(cleanSpellName)
 				spell := spellDB.GetSpellByID(spellID)
 				var notNecro bool

@@ -5,3 +5,5 @@ config.json
 archive/*
 .vscode/*
 Release/*
+*.7z
+*.zip

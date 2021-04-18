@@ -178,7 +178,7 @@ func findWhoNeedsSpell(s everquest.Spell) []string {
 					continue
 				}
 				spellName := fmt.Sprintf("%s", row[configuration.SpellSheetSpellCol])
-				if "Spell: "+s.Name == spellName {
+				if "Spell: "+s.Name == spellName || strings.Replace(s.Name, "Ancient ", "Ancient: ", 1) == spellName { // Ancients are dumb
 					// fmt.Printf("h: %d data: %s\n", configuration.SpellSheetPlayerStartCol, row[configuration.SpellSheetPlayerStartCol])
 					for h := configuration.SpellSheetPlayerStartCol; h < len(row); h++ {
 						rowString := fmt.Sprintf("%s", row[h])
