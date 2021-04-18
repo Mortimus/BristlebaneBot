@@ -45,6 +45,11 @@ var ChatLogs chan everquest.EqLog
 var currentZone string
 var needsLooted []string
 
+var raidDumps int
+var raidStart time.Time
+var nextDump time.Time
+var needsDump bool
+
 // var needsReact map[string]*bool
 // var needsReactLock sync.Mutex
 
@@ -144,7 +149,7 @@ func main() {
 
 func printHUD() {
 	fmt.Print("\033[H\033[2J") // clear the terminal should only work in windows
-	fmt.Printf("Time: %s\n", currentTime.String())
+	fmt.Printf("Time: %s\tNextDump: %s\n", currentTime.String(), nextDump.String())
 	fmt.Printf("Player: %s\tZone: %s\n", getPlayerName(configuration.EQLogPath), currentZone)
 	fmt.Printf("Guild Members: %d\n", len(roster))
 	fmt.Printf("SecondMainsBidAsMains: %t\tSecondMainMaxBidAsMain: %d\n", configuration.SecondMainsBidAsMains, configuration.SecondMainAsMainMaxBid)
@@ -178,6 +183,10 @@ func parseLogLine(log everquest.EqLog) {
 	// if log.Channel != "system" && log.Channel != "guild" && log.Channel != "group" && log.Channel != "raid" {
 	// 	// fmt.Printf("Channel: %s\n", l.channel)
 	// }
+	if !needsDump && getTime().Round(5*time.Minute) == nextDump.Round(5*time.Minute) {
+		DiscordF(configuration.RaidDumpChannelID, "Time for another hourly raid dump!")
+		needsDump = true
+	}
 	if log.Channel == "guild" {
 		investigation.addLog(log)
 		// Close Bid
@@ -757,7 +766,22 @@ func uploadRaidDump(filename string) {
 		l.ErrorF("Error finding Raid Dump: %s", err.Error())
 		discord.ChannelMessageSend(configuration.RaidDumpChannelID, "Error uploading Raid Dump: "+filename)
 	} else {
-		DiscordF(configuration.RaidDumpChannelID, "%s uploaded a raid dump at %s for %s", getPlayerName(configuration.EQLogPath), time.Now().String(), currentZone)
+		if raidDumps == 0 {
+			DiscordF(configuration.RaidDumpChannelID, "%s uploaded an on-time raid dump at %s for %s", getPlayerName(configuration.EQLogPath), getTime().String(), currentZone)
+			raidDumps++
+			// Start timer
+			raidStart = getTime().Round(1 * time.Hour)
+			nextDump = raidStart.Add(1 * time.Hour)
+		} else {
+			if needsDump && getTime().Round(1*time.Hour) == nextDump {
+				raidDumps++
+				nextDump = nextDump.Add(1 * time.Hour)
+				needsDump = false
+				DiscordF(configuration.RaidDumpChannelID, "%s uploaded an hourly raid dump at %s for %s", getPlayerName(configuration.EQLogPath), getTime().String(), currentZone)
+			} else {
+				DiscordF(configuration.RaidDumpChannelID, "%s uploaded a boss kill raid dump at %s for %s", getPlayerName(configuration.EQLogPath), getTime().String(), currentZone)
+			}
+		}
 		discord.ChannelFileSend(configuration.RaidDumpChannelID, filename, file)
 	}
 }
@@ -1033,7 +1057,7 @@ func isDumpOutOfDate(dump string) bool {
 	// if err != nil {
 	// 	l.ErrorF("Error parsing tz : %s", err.Error())
 	// }
-	t := time.Now()
+	t := getTime()
 	zone, _ := t.Zone()
 	name := strings.Split(dump, "-") // seperate by hypen so [1] is the day we care about
 	format := "20060102MST"
@@ -1042,8 +1066,8 @@ func isDumpOutOfDate(dump string) bool {
 	if err != nil {
 		l.ErrorF("Error parsing time of guild dump : %s", err.Error())
 	}
-	l.InfoF("LogDate: %s before Now: %s After: %s", logDate.String(), time.Now().String(), time.Now().Add(-24*time.Hour).String())
-	return logDate.Before(time.Now()) && logDate.After(time.Now().Add(-24*time.Hour))
+	l.InfoF("LogDate: %s before Now: %s After: %s", logDate.String(), getTime().String(), getTime().Add(-24*time.Hour).String())
+	return logDate.Before(getTime()) && logDate.After(getTime().Add(-24*time.Hour))
 }
 
 // // ByTime is for finding the most recent item
