@@ -62,6 +62,16 @@ type Configuration struct {
 	BidsOnlyCloseAutomatically   bool      `json:"BidsOnlyCloseAutomatically"`   // If true, bids close by time, if false it closes by message
 	SecondMainsBidAsMains        bool      `json:"SecondMainsBidAsMains"`        // If it's an offnight then secondmains count as mains, or pop on with a max bid
 	SecondMainAsMainMaxBid       int       `json:"SecondMainAsMainMaxBid"`       // Secondmain counts as a main but has a max bid of this value
+	RaidDumpChannelID            string    `json:"RaidDumpChannelID"`            // Channel ID on where to send raid dumps
+	SpellDumpChannelID           string    `json:"SpellDumpChannelID"`           // Channel ID on where to send looted spells
+	RegexLoot                    string    `json:"RegexLoot"`                    // Regex for detecting a spell was looted
+	FlagChannelID                string    `json:"FlagChannelID"`                // Channel ID on where to send hails to planar projection
+	LucySpells                   string    `json:"LucySpells"`                   // Lucy spells.txt
+	SpellSheetURL                string    `json:"SpellSheetURL"`                // Google sheets sheet URL for the spell lookup
+	SpellSheetSpellCol           int       `json:"SpellSheetSpellCol"`           // Google sheet sheet column for spell names
+	SpellSheetPlayerStartCol     int       `json:"SpellSheetPlayerStartCol"`     // Google sheet sheet column for when player names start
+	SpellSheetDataRowStart       int       `json:"SpellSheetDataRowStart"`       // Google sheet sheet row for when spell names start
+	SpellSheetPlayerRow          int       `json:"SpellSheetPlayerRow"`          // Google sheet sheet row for when player names start
 }
 
 func init() {

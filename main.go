@@ -30,7 +30,9 @@ var bids = map[string]*BidItem{}
 
 // var itemDB map[string]int
 var itemDB everquest.ItemDB
-var itemLock sync.Mutex
+var spellDB everquest.SpellDB
+
+// var itemLock sync.Mutex
 
 var investigation Investigation
 var currentTime time.Time // for simulating time
@@ -41,6 +43,7 @@ var rosterLock sync.Mutex
 var ChatLogs chan everquest.EqLog
 
 var currentZone string
+var needsLooted []string
 
 // var needsReact map[string]*bool
 // var needsReactLock sync.Mutex
@@ -65,6 +68,7 @@ func main() {
 	defer l.End()
 	// itemDB = loaditemDB(configuration.LucyItems)
 	itemDB.LoadFromFile("items.txt")
+	spellDB.LoadFromFile("spells.txt")
 	archives = getArchiveList()
 	// loadRoster(configuration.GuildRosterPath)
 
@@ -150,6 +154,10 @@ func printHUD() {
 		fmt.Printf("#%d: %s\n", i, bid.Item)
 		i++
 	}
+	fmt.Printf("Waiting to be looted: %d\n", len(needsLooted))
+	for num, item := range needsLooted {
+		fmt.Printf("#%d: %s\n", num+1, item)
+	}
 }
 
 func parseLogs() {
@@ -167,9 +175,9 @@ func parseLogLine(log everquest.EqLog) {
 	l := LogInit("getSource-main.go")
 	defer l.End()
 	currentTime = log.T
-	if log.Channel != "system" && log.Channel != "guild" && log.Channel != "group" && log.Channel != "raid" {
-		// fmt.Printf("Channel: %s\n", l.channel)
-	}
+	// if log.Channel != "system" && log.Channel != "guild" && log.Channel != "group" && log.Channel != "raid" {
+	// 	// fmt.Printf("Channel: %s\n", l.channel)
+	// }
 	if log.Channel == "guild" {
 		investigation.addLog(log)
 		// Close Bid
@@ -185,7 +193,7 @@ func parseLogLine(log everquest.EqLog) {
 				}
 			} else {
 				l.WarnF("Cannot find item %s has id %d\n", itemName, itemID)
-				DiscordF("**[ERROR] Cannot find item %s has id %d, bids will NOT be recorded. Item list needs updated and someone needs to manually take bids.\n", itemName, itemID)
+				DiscordF(configuration.InvestigationChannelID, "**[ERROR] Cannot find item %s has id %d, for closing, please retry.**\n", itemName, itemID)
 			}
 			return
 		}
@@ -208,11 +216,16 @@ func parseLogLine(log everquest.EqLog) {
 				}
 			} else {
 				l.WarnF("Cannot find item %s has id %d\n", itemName, itemID)
-				DiscordF("**[ERROR] Cannot find item %s has id %d, bids will NOT be recorded. Item list needs updated and someone needs to manually take bids.**\n", itemName, itemID)
+				DiscordF(configuration.InvestigationChannelID, "**[ERROR] Cannot find item %s has id %d, bids will NOT be recorded. Item list needs updated and someone needs to manually take bids.**\n", itemName, itemID)
 			}
 			return
 		}
 
+	}
+	if log.Channel == "say" { // Guzz says, 'Hail, a spell jammer'
+		if strings.Contains(log.Msg, "Hail, A Planar Projection") {
+			DiscordF(configuration.FlagChannelID, "%s got the flag from %s\n", log.Source, currentZone)
+		}
 	}
 	if log.Channel == "tell" {
 		investigation.addLog(log)
@@ -251,13 +264,69 @@ func parseLogLine(log everquest.EqLog) {
 			}
 		}
 		if strings.Contains(log.Msg, "You have entered ") && !strings.Contains(log.Msg, "function.") { // You have entered Vex Thal. NOT You have entered an area where levitation effects do not function.
-			currentZone = log.Msg[16 : len(log.Msg)-1]
+			currentZone = log.Msg[17 : len(log.Msg)-1]
+			printHUD()
+			l.InfoF("Changing zone to %s\n", currentZone)
+		}
+		// Item Looted
+		r, _ := regexp.Compile(configuration.RegexLoot)
+		result := r.FindStringSubmatch(log.Msg)
+		if len(result) > 0 {
+			if strings.Contains(result[2], "Spell: ") { // TODO: Include "Ancient: "
+				// TODO: Lookup who needs the spell and add it to the loot message
+				cleanSpellName := strings.Replace(result[2], "Spell: ", "", 1)
+				spellID := spellDB.FindIDByName(cleanSpellName)
+				spell := spellDB.GetSpellByID(spellID)
+				var notNecro bool
+				for _, classCanUse := range spell.GetClasses() {
+					if classCanUse == "Necromancer" {
+						var canUseString string
+						for i, player := range findWhoNeedsSpell(spell) {
+							if i != 0 {
+								canUseString += ", "
+							}
+							canUseString += player
+						}
+						DiscordF(configuration.SpellDumpChannelID, "%s looted %s from %s needed by %+s", result[1], spell.Name, result[3], canUseString)
+					} else {
+						notNecro = true
+					}
+				}
+				if notNecro {
+					DiscordF(configuration.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
+				}
+				if len(spell.GetClasses()) == 0 {
+					// TODO: do a broader search for a spell with said name that has classes
+					DiscordF(configuration.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
+				}
+			}
+			if result[2] == "Ethereal Parchment" || result[2] == "Spectral Parchment" || result[2] == "Glyphed Rune Word" {
+				// TODO: Lookup what class will get this and add it to the loot message
+				DiscordF(configuration.SpellDumpChannelID, "%s looted %s from %s", result[1], result[2], result[3])
+			}
+			for _, item := range needsLooted { // Notify that someone looted a bid upon item
+				if strings.ToLower(result[2]) == item {
+					DiscordF(configuration.LootChannelID, "%s looted %s from %s", result[1], result[2], result[3])
+					removeLootFromLooted(item)
+					break // We only want to remove 1 item per loot (multi bid items we want to see all winners loot them)
+				}
+			}
 		}
 	}
 }
 
 func removeFromSlice(slice []Bid, s int) []Bid {
 	return append(slice[:s], slice[s+1:]...)
+}
+
+func removeLootFromLooted(item string) {
+	var itemPos int
+	for pos, name := range needsLooted {
+		if name == item {
+			itemPos = pos
+		}
+	}
+	needsLooted = append(needsLooted[:itemPos], needsLooted[itemPos+1:]...)
 }
 
 func openBid(item string, count int, id int) {
@@ -416,6 +485,9 @@ func (b *BidItem) closeBid() {
 		if winner.Player.Name != winner.Player.Main {
 			displayName = fmt.Sprintf("%s (%s)", winner.Player.Name, winner.Player.Main)
 		}
+		if winner.Player.Name != "Rot" { // Rot is left on corpse
+			needsLooted = append(needsLooted, b.Item)
+		}
 		fields = append(fields, &discordgo.MessageEmbedField{
 			Name:  displayName,
 			Value: strconv.Itoa(winner.Amount),
@@ -459,6 +531,8 @@ type Winner struct {
 }
 
 func (b *BidItem) getWinners(count int) []Winner {
+	l := LogInit("getWinners-main.go")
+	defer l.End()
 	// Account for no bids (rot)
 	for i := 0; i < count+1; i++ {
 		fakeBid := Bid{
@@ -474,11 +548,20 @@ func (b *BidItem) getWinners(count int) []Winner {
 	if b.Bids[0].Bidder != "Rot" && winningbid < configuration.MinimumBid {
 		winningbid = configuration.MinimumBid
 	}
+	if b.Bids[count].Player.Rank != b.Bids[count-1].Player.Rank { // If we outrank them minimum bid is 10
+		if configuration.SecondMainsBidAsMains && b.Bids[count].Player.Rank == cMain && b.Bids[count-1].Player.Rank == cSecondMain {
+			l.InfoF("%s was outranked by %s but is a main vs secondmain so ignoring", b.Bids[count].Player.Name, b.Bids[count-1].Player.Name)
+		} else {
+			l.InfoF("%s's rank of %d outranks %s's rank of %d", b.Bids[count-1].Player.Name, b.Bids[count-1].Player.Rank, b.Bids[count].Player.Name, b.Bids[count].Player.Rank)
+			winningbid = configuration.MinimumBid
+		}
+	}
 	if winningbid > b.Bids[0].Amount { // account for ties
 		winningbid = b.Bids[0].Amount
 		if winningbid == b.Bids[count-1].Amount && b.Bids[count-1].Bidder != "Rot" {
 			// A ROLL OFF IS NEEDED
 			// Determine AMOUNT of ties
+			l.InfoF("Roll off required!: %#+v vs %#+v\n", b.Bids[count], b.Bids[count-1])
 			var ties int
 			for _, bidder := range b.Bids {
 				if bidder.Amount == winningbid && b.Bids[0].Player.Rank == bidder.Player.Rank { // is tied winner
@@ -543,8 +626,8 @@ func sortBids(bids []Bid) []Bid {
 	if len(mains) == 0 {
 		l.InfoF("No mains bid on this item")
 	}
-	if len(mains) > 0 && configuration.SecondMainsBidAsMains { // we don't need to do anything if no mains bid
-		if configuration.SecondMainAsMainMaxBid > 0 { // We need to lower their bids that are > 200
+	if configuration.SecondMainsBidAsMains { // we don't need to do anything if no mains bid
+		if configuration.SecondMainAsMainMaxBid > 0 && len(mains) > 0 { // We need to lower their bids that are > 200 only if mains bid
 			// looping like this uses a copy I think so we need to make a new slice
 			var fixedSMains []Bid
 			for _, sMain := range secondmains {
@@ -584,13 +667,13 @@ func (a ByBid) Len() int           { return len(a) }
 func (a ByBid) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
 func (a ByBid) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
-func dumpBids() {
-	l := LogInit("dumpBids-main.go")
-	defer l.End()
-	for i, bid := range bids {
-		l.TraceF("%s: %#+v\n", i, bid)
-	}
-}
+// func dumpBids() {
+// 	l := LogInit("dumpBids-main.go")
+// 	defer l.End()
+// 	for i, bid := range bids {
+// 		l.TraceF("%s: %#+v\n", i, bid)
+// 	}
+// }
 
 func isItem(name string) int {
 	l := LogInit("isItem-main.go")
@@ -671,10 +754,10 @@ func uploadRaidDump(filename string) {
 	file, err := os.Open(configuration.EQBaseFolder + "/" + filename)
 	if err != nil {
 		l.ErrorF("Error finding Raid Dump: %s", err.Error())
-		discord.ChannelMessageSend(configuration.InvestigationChannelID, "Error uploading Raid Dump: "+filename)
+		discord.ChannelMessageSend(configuration.RaidDumpChannelID, "Error uploading Raid Dump: "+filename)
 	} else {
-		DiscordF("%s uploaded a raid dump at %s", getPlayerName(configuration.EQLogPath), time.Now().String())
-		discord.ChannelFileSend(configuration.InvestigationChannelID, filename, file)
+		DiscordF(configuration.RaidDumpChannelID, "%s uploaded a raid dump at %s for %s", getPlayerName(configuration.EQLogPath), time.Now().String(), currentZone)
+		discord.ChannelFileSend(configuration.RaidDumpChannelID, filename, file)
 	}
 }
 
@@ -919,7 +1002,7 @@ func getRecentRosterDump(path string) string {
 	// 	fmt.Println(file)
 	// }
 	if !isDumpOutOfDate(files[len(files)-1]) {
-		DiscordF("**Guild dump %s is out of date, this needs updated with ALL members (including offline and alts) before bidbot is ran**", files[len(files)-1])
+		DiscordF(configuration.InvestigationChannelID, "**Guild dump %s is out of date, this needs updated with ALL members (including offline and alts) before bidbot is ran**", files[len(files)-1])
 	}
 
 	return files[len(files)-1] // return last file - should be latest

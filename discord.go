@@ -70,12 +70,12 @@ func isPriviledged(s *discordgo.Session, userID string) bool {
 }
 
 // DiscordF provides a printf to a discord channel
-func DiscordF(format string, v ...interface{}) {
+func DiscordF(channel string, format string, v ...interface{}) {
 	l := LogInit("DiscordF-commands.go")
 	defer l.End()
 	msg := fmt.Sprintf(format, v...)
-	_, err := discord.ChannelMessageSend(configuration.InvestigationChannelID, msg)
+	_, err := discord.ChannelMessageSend(channel, msg)
 	if err != nil {
-		l.ErrorF("Failed to send to discord: %s", err.Error())
+		l.ErrorF("Failed to send message to %s: %s", channel, err.Error())
 	}
 }

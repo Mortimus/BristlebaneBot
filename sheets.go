@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	everquest "github.com/Mortimus/goEverquest"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/sheets/v4"
 )
@@ -110,7 +111,7 @@ type Gtoken struct {
 }
 
 func updateDKP() {
-	l := LogInit("updateDKP-commands.go")
+	l := LogInit("updateDKP-sheets.go")
 	defer l.End()
 	spreadsheetID := configuration.DKPSheetURL
 	readRange := configuration.DKPSummarySheetName
@@ -125,7 +126,10 @@ func updateDKP() {
 		// log.Println("No data found.")
 	} else {
 		// var lastClass string
-		for _, row := range resp.Values {
+		for i, row := range resp.Values {
+			if i == 0 { // skip the header
+				continue
+			}
 			name := fmt.Sprintf("%s", row[configuration.DKPSummarySheetPlayerCol])
 			name = strings.TrimSpace(name)
 			if name != "" {
@@ -140,4 +144,57 @@ func updateDKP() {
 			}
 		}
 	}
+}
+
+func findWhoNeedsSpell(s everquest.Spell) []string {
+	l := LogInit("findWhoNeedsSpell-sheets.go")
+	defer l.End()
+	spreadsheetID := configuration.SpellSheetURL
+	classes := s.GetClasses()
+	var players []string
+	for _, class := range classes {
+		if class == "Unknown" {
+			continue
+		}
+		l.InfoF("Finding who from class %s needs %s\n", class, s.Name)
+		resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, class).Do()
+		if err != nil {
+			l.ErrorF("Unable to retrieve data from sheet: %v", err)
+			return nil
+		}
+
+		if len(resp.Values) == 0 {
+			l.ErrorF("Cannot read spell sheet: %v", resp)
+			// log.Println("No data found.")
+		} else {
+			// var lastClass string
+			for i, row := range resp.Values {
+				// fmt.Printf("I: %d Config: %d\n", i, configuration.SpellSheetDataRowStart)
+				if i < configuration.SpellSheetDataRowStart-1 {
+					continue
+				}
+				// fmt.Println(row)
+				if len(row) <= configuration.SpellSheetSpellCol {
+					continue
+				}
+				spellName := fmt.Sprintf("%s", row[configuration.SpellSheetSpellCol])
+				if "Spell: "+s.Name == spellName {
+					// fmt.Printf("h: %d data: %s\n", configuration.SpellSheetPlayerStartCol, row[configuration.SpellSheetPlayerStartCol])
+					for h := configuration.SpellSheetPlayerStartCol; h < len(row); h++ {
+						rowString := fmt.Sprintf("%s", row[h])
+						if rowString == "FALSE" {
+							player := fmt.Sprintf("%s", resp.Values[configuration.SpellSheetPlayerRow][h])
+							players = append(players, player)
+							l.InfoF("Player: %s needs %s\n", player, spellName)
+						}
+					}
+					break
+				}
+			}
+		}
+	}
+	if len(players) == 0 {
+		players = append(players, "no one")
+	}
+	return players
 }
