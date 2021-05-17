@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -50,6 +52,8 @@ var raidStart time.Time
 var nextDump time.Time
 var needsDump bool
 
+var Debug, Warn, Err, Info *log.Logger
+
 // var needsReact map[string]*bool
 // var needsReactLock sync.Mutex
 
@@ -61,37 +65,63 @@ const (
 	cMain
 )
 
+func init() {
+	// Initialize log handlers
+	LogFile, err := os.OpenFile(configuration.Log.Path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	Warn = log.New(LogFile, "[WARN] ", log.Lshortfile|log.Ldate|log.Ltime|log.LUTC|log.Lmsgprefix)
+	Err = log.New(LogFile, "[ERR] ", log.Lshortfile|log.Ldate|log.Ltime|log.LUTC|log.Lmsgprefix)
+	Info = log.New(LogFile, "[INFO] ", log.Lshortfile|log.Ldate|log.Ltime|log.LUTC|log.Lmsgprefix)
+	Debug = log.New(LogFile, "[DEBUG] ", log.Lshortfile|log.Ldate|log.Ltime|log.LUTC|log.Lmsgprefix)
+	if configuration.Log.Level < 0 {
+		Warn.SetOutput(ioutil.Discard)
+	}
+	if configuration.Log.Level < 1 {
+		Err.SetOutput(ioutil.Discard)
+	}
+	if configuration.Log.Level < 2 {
+		Info.SetOutput(ioutil.Discard)
+	}
+	if configuration.Log.Level < 3 {
+		Debug.SetOutput(ioutil.Discard)
+	}
+	itemDB.LoadFromFile(configuration.Everquest.ItemDB)
+	spellDB.LoadFromFile(configuration.Everquest.SpellDB, Err)
+}
+
 func main() {
 	// Open Configuration and set log output
-	configFile, err := os.OpenFile(configuration.LogPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
-	}
-	defer configFile.Close()
-	log.SetOutput(configFile)
-	l := LogInit("main-main.go")
-	defer l.End()
+	// configFile, err := os.OpenFile(configuration.LogPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	// if err != nil {
+	// 	log.Fatalf("error opening file: %v", err)
+	// }
+	// defer configFile.Close()
+	// log.SetOutput(configFile)
+	// l := LogInit("main-main.go")
+	// defer l.End()
 	// itemDB = loaditemDB(configuration.LucyItems)
-	itemDB.LoadFromFile("items.txt")
-	spellDB.LoadFromFile("spells.txt")
+	// itemDB.LoadFromFile(configuration.Everquest.ItemDB)
+	// spellDB.LoadFromFile(configuration.Everquest.SpellDB)
 	archives = getArchiveList()
 	// loadRoster(configuration.GuildRosterPath)
 
 	gtoken := &Gtoken{
 		Installed: Inst{
-			ClientID:                configuration.ClientID,
-			ProjectID:               configuration.ProjectID,
-			AuthURI:                 configuration.AuthURI,
-			TokenURI:                configuration.TokenURI,
-			AuthProviderx509CertURL: configuration.AuthProviderx509CertURL,
-			ClientSecret:            configuration.ClientSecret,
-			RedirectURIs:            configuration.RedirectURIs,
+			ClientID:                configuration.Google.ClientID,
+			ProjectID:               configuration.Google.ProjectID,
+			AuthURI:                 configuration.Google.AuthURI,
+			TokenURI:                configuration.Google.TokenURI,
+			AuthProviderx509CertURL: configuration.Google.AuthProviderx509CertURL,
+			ClientSecret:            configuration.Google.ClientSecret,
+			RedirectURIs:            configuration.Google.RedirectURIs,
 		},
 	}
-	l.InfoF("Marshalling gToken: %+v", gtoken)
+	Info.Printf("Marshalling gToken: %+v", gtoken)
 	bToken, err := json.Marshal(gtoken)
 	if err != nil {
-		l.FatalF("error marshalling gtoken")
+		Err.Fatalf("error marshalling gtoken")
 	}
 
 	// b, err := ioutil.ReadFile("credentials.json")
@@ -102,28 +132,28 @@ func main() {
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON(bToken, "https://www.googleapis.com/auth/spreadsheets")
 	if err != nil {
-		l.FatalF("Unable to parse client secret file to config: %v", err)
+		Err.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
 	client := getClient(config)
 
 	srv, err = sheets.New(client)
 	if err != nil {
-		l.FatalF("Unable retrieve Sheets client: %v", err)
+		Err.Fatalf("Unable retrieve Sheets client: %v", err)
 	}
 
 	// Create a new Discord session using the provided bot token.
-	discord, err = discordgo.New("Bot " + configuration.DiscordToken)
+	discord, err = discordgo.New("Bot " + configuration.Discord.Token)
 	if err != nil {
-		l.FatalF("Error creating Discord session: %v", err)
+		Err.Fatalf("Error creating Discord session: %v", err)
 	}
 	defer discord.Close()
 	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 	// updateDKP()
 	// dumpPlayers()
 	// fmt.Println(itemDB["Vyemm's Fang"])
-	loadRoster(configuration.EQBaseFolder + "/" + getRecentRosterDump(configuration.EQBaseFolder)) // needs to run AFTER discord is initialized
+	loadRoster(configuration.Everquest.BaseFolder + "/" + getRecentRosterDump(configuration.Everquest.BaseFolder)) // needs to run AFTER discord is initialized
 	ChatLogs = make(chan everquest.EqLog)
-	go everquest.BufferedLogRead(configuration.EQLogPath, configuration.ReadEntireLog, configuration.LogPollRate, ChatLogs)
+	go everquest.BufferedLogRead(configuration.Everquest.LogPath, configuration.Main.ReadEntireLog, configuration.Main.LogPollRate, ChatLogs, nil)
 	go parseLogs()
 
 	// // Register the messageCreate func as a callback for MessageCreate events.
@@ -133,7 +163,7 @@ func main() {
 	// Open a websocket connection to Discord and begin listening.
 	err = discord.Open()
 	if err != nil {
-		l.FatalF("Error opening connection with Discord: %v", err)
+		Err.Fatalf("Error opening connection with Discord: %v", err)
 		return
 	}
 
@@ -141,7 +171,7 @@ func main() {
 
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
-	l.InfoF("Bot is now running")
+	Info.Printf("Bot is now running")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
@@ -150,9 +180,9 @@ func main() {
 func printHUD() {
 	fmt.Print("\033[H\033[2J") // clear the terminal should only work in windows
 	fmt.Printf("Time: %s\tNextDump: %s\n", currentTime.String(), nextDump.String())
-	fmt.Printf("Player: %s\tZone: %s\n", getPlayerName(configuration.EQLogPath), currentZone)
+	fmt.Printf("Player: %s\tZone: %s\n", getPlayerName(configuration.Everquest.LogPath), currentZone)
 	fmt.Printf("Guild Members: %d\n", len(roster))
-	fmt.Printf("SecondMainsBidAsMains: %t\tSecondMainMaxBidAsMain: %d\n", configuration.SecondMainsBidAsMains, configuration.SecondMainAsMainMaxBid)
+	fmt.Printf("SecondMainsBidAsMains: %t\tSecondMainMaxBidAsMain: %d\n", configuration.Bids.SecondMainsBidAsMains, configuration.Bids.SecondMainAsMainMaxBid)
 	fmt.Printf("Open Bids: %d\n", len(bids))
 	i := 1
 	for _, bid := range bids {
@@ -166,9 +196,7 @@ func printHUD() {
 }
 
 func parseLogs() {
-	l := LogInit("parseLogs-main.go")
-	defer l.End()
-	l.InfoF("Parsing logs")
+	Info.Printf("Parsing logs")
 	printHUD()
 	for msgs := range ChatLogs {
 		checkClosedBids()
@@ -177,20 +205,18 @@ func parseLogs() {
 }
 
 func parseLogLine(log everquest.EqLog) {
-	l := LogInit("getSource-main.go")
-	defer l.End()
 	currentTime = log.T
 	// if log.Channel != "system" && log.Channel != "guild" && log.Channel != "group" && log.Channel != "raid" {
 	// 	// fmt.Printf("Channel: %s\n", l.channel)
 	// }
 	if !needsDump && getTime().Round(5*time.Minute) == nextDump.Round(5*time.Minute) {
-		DiscordF(configuration.RaidDumpChannelID, "Time for another hourly raid dump!")
+		DiscordF(configuration.Discord.RaidDumpChannelID, "Time for another hourly raid dump!")
 		needsDump = true
 	}
 	if log.Channel == "guild" {
 		investigation.addLog(log)
 		// Close Bid
-		r, _ := regexp.Compile(configuration.RegexClosedBid) // TODO: Force this to match only the bidmaster
+		r, _ := regexp.Compile(configuration.Bids.RegexClosedBid) // TODO: Force this to match only the bidmaster
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
 			itemName := strings.TrimSpace(result[1])
@@ -201,13 +227,13 @@ func parseLogLine(log everquest.EqLog) {
 					bids[itemName].End = bids[itemName].Start // force the bid to show as done
 				}
 			} else {
-				l.WarnF("Cannot find item %s has id %d\n", itemName, itemID)
-				DiscordF(configuration.InvestigationChannelID, "**[ERROR] Cannot find item %s has id %d, for closing, please retry.**\n", itemName, itemID)
+				Warn.Printf("Cannot find item %s has id %d\n", itemName, itemID)
+				DiscordF(configuration.Discord.InvestigationChannelID, "**[ERROR] Cannot find item %s has id %d, for closing, please retry.**\n", itemName, itemID)
 			}
 			return
 		}
 		// Open Bid
-		r, _ = regexp.Compile(configuration.RegexOpenBid) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
+		r, _ = regexp.Compile(configuration.Bids.RegexOpenBid) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
 		result = r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
 			itemName := strings.TrimSpace(result[1])
@@ -219,13 +245,13 @@ func parseLogLine(log everquest.EqLog) {
 				} else {
 					count, err := strconv.Atoi(result[2][1:])
 					if err != nil {
-						l.ErrorF("Error converting item count to int: %s", err.Error())
+						Err.Printf("Error converting item count to int: %s", err.Error())
 					}
 					openBid(itemName, count, itemID)
 				}
 			} else {
-				l.WarnF("Cannot find item %s has id %d\n", itemName, itemID)
-				DiscordF(configuration.InvestigationChannelID, "**[ERROR] Cannot find item %s has id %d, bids will NOT be recorded. Item list needs updated and someone needs to manually take bids.**\n", itemName, itemID)
+				Warn.Printf("Cannot find item %s has id %d\n", itemName, itemID)
+				DiscordF(configuration.Discord.InvestigationChannelID, "**[ERROR] Cannot find item %s has id %d, bids will NOT be recorded. Item list needs updated and someone needs to manually take bids.**\n", itemName, itemID)
 			}
 			return
 		}
@@ -233,13 +259,13 @@ func parseLogLine(log everquest.EqLog) {
 	}
 	if log.Channel == "say" { // Guzz says, 'Hail, a spell jammer'
 		if strings.Contains(log.Msg, "Hail, A Planar Projection") || strings.Contains(log.Msg, "Hail, Tarkil Adan") || strings.Contains(log.Msg, "Hail, Essence of Fire") || strings.Contains(log.Msg, "Hail, Essence of Water") || strings.Contains(log.Msg, "Hail, Essence of Earth") || strings.Contains(log.Msg, "Hail, Essence of Air") {
-			DiscordF(configuration.FlagChannelID, "%s got the flag from %s\n", log.Source, currentZone)
+			DiscordF(configuration.Discord.FlagChannelID, "%s got the flag from %s\n", log.Source, currentZone)
 		}
 	}
 	if log.Channel == "tell" {
 		investigation.addLog(log)
 		// Add Bid
-		r, _ := regexp.Compile(configuration.RegexTellBid)
+		r, _ := regexp.Compile(configuration.Bids.RegexTellBid)
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
 			// var bid string
@@ -247,13 +273,13 @@ func parseLogLine(log everquest.EqLog) {
 			bidClean := strings.ReplaceAll(result[2], ",", "")
 			bid, err := strconv.Atoi(bidClean)
 			if err != nil {
-				l.ErrorF("Error converting bid to int: %s", result[2])
+				Err.Printf("Error converting bid to int: %s", result[2])
 			}
 			itemName := strings.TrimSpace(result[1])
 			itemName = strings.ToLower(itemName)
 			if isItem(strings.TrimSpace(itemName)) > 0 && isBidOpen(strings.TrimSpace(itemName)) { // item names don't get that long
 				if bid == 0 && bids[strings.TrimSpace(itemName)].bidderExists(log.Source) != -1 { // Bidder wants to cancel
-					l.InfoF("%s is trying to remove their bid\n", log.Source)
+					Info.Printf("%s is trying to remove their bid\n", log.Source)
 					bids[strings.TrimSpace(itemName)].Bids = removeFromSlice(bids[strings.TrimSpace(itemName)].Bids, bids[strings.TrimSpace(itemName)].bidderExists(log.Source))
 				}
 				if bid >= 10 {
@@ -267,18 +293,23 @@ func parseLogLine(log everquest.EqLog) {
 		if strings.Contains(log.Msg, "Outputfile") {
 			outputName := log.Msg[21:] // Filename Outputfile sent data to
 			if strings.Contains(log.Msg, "RaidRoster") {
-				l.InfoF("Raid Dump exported, uploading")
+				Info.Printf("Raid Dump exported, uploading")
 				// upload to discord
 				uploadRaidDump(outputName)
+			}
+			if strings.Contains(log.Msg, configuration.Everquest.GuildName) {
+				Info.Printf("Guild Dump exported, uploading")
+				// upload to discord
+				uploadGuildDump(outputName)
 			}
 		}
 		if strings.Contains(log.Msg, "You have entered ") && !strings.Contains(log.Msg, "function.") { // You have entered Vex Thal. NOT You have entered an area where levitation effects do not function.
 			currentZone = log.Msg[17 : len(log.Msg)-1]
 			printHUD()
-			l.InfoF("Changing zone to %s\n", currentZone)
+			Info.Printf("Changing zone to %s\n", currentZone)
 		}
 		// Item Looted
-		r, _ := regexp.Compile(configuration.RegexLoot)
+		r, _ := regexp.Compile(configuration.Everquest.RegexLoot)
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
 			if strings.Contains(result[2], "Spell: ") || strings.Contains(result[2], "Ancient: ") { // TODO: Include "Ancient: "
@@ -297,26 +328,26 @@ func parseLogLine(log everquest.EqLog) {
 							}
 							canUseString += player
 						}
-						DiscordF(configuration.SpellDumpChannelID, "%s looted %s from %s needed by %+s", result[1], spell.Name, result[3], canUseString)
+						DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s needed by %+s", result[1], spell.Name, result[3], canUseString)
 					} else {
 						notNecro = true
 					}
 				}
 				if notNecro {
-					DiscordF(configuration.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
+					DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
 				}
 				if len(spell.GetClasses()) == 0 {
 					// TODO: do a broader search for a spell with said name that has classes
-					DiscordF(configuration.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
+					DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
 				}
 			}
 			if result[2] == "Ethereal Parchment" || result[2] == "Spectral Parchment" || result[2] == "Glyphed Rune Word" {
 				// TODO: Lookup what class will get this and add it to the loot message
-				DiscordF(configuration.SpellDumpChannelID, "%s looted %s from %s", result[1], result[2], result[3])
+				DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s", result[1], result[2], result[3])
 			}
 			for _, item := range needsLooted { // Notify that someone looted a bid upon item
 				if strings.ToLower(result[2]) == item {
-					DiscordF(configuration.LootChannelID, "%s looted %s from %s", result[1], result[2], result[3])
+					DiscordF(configuration.Discord.LootChannelID, "%s looted %s from %s", result[1], result[2], result[3])
 					removeLootFromLooted(item)
 					break // We only want to remove 1 item per loot (multi bid items we want to see all winners loot them)
 				}
@@ -340,36 +371,32 @@ func removeLootFromLooted(item string) {
 }
 
 func openBid(item string, count int, id int) {
-	l := LogInit("openBid-main.go")
-	defer l.End()
 	if _, ok := bids[item]; ok { // if the bid already exist, remove old
 		// bids[item] = &BidItem{}
 		// delete(bids, item)
-		l.InfoF("Ignoring duplicate bid item: %s\n", item)
+		Info.Printf("Ignoring duplicate bid item: %s\n", item)
 		return
 	}
-	l.InfoF("Opening bid for: %s x%d\n", item, count)
+	Info.Printf("Opening bid for: %s x%d\n", item, count)
 	updateDKP() // update player dkp with bid
 	bids[item] = &BidItem{}
-	bids[item].SecondMainsBidAsMains = configuration.SecondMainsBidAsMains   // For investigation purposes and debug replay
-	bids[item].SecondMainAsMainMaxBid = configuration.SecondMainAsMainMaxBid // For investigation purposes and debug replay
+	bids[item].SecondMainsBidAsMains = configuration.Bids.SecondMainsBidAsMains   // For investigation purposes and debug replay
+	bids[item].SecondMainAsMainMaxBid = configuration.Bids.SecondMainAsMainMaxBid // For investigation purposes and debug replay
 	bids[item].Zone = currentZone
 	bids[item].Item = item
 	bids[item].Count = count
 	bids[item].ID = id
-	bids[item].URL = configuration.LucyURLPrefix + strconv.Itoa(id)
+	bids[item].URL = configuration.Main.LucyURLPrefix + strconv.Itoa(id)
 	bids[item].startBid()
 	printHUD()
 	// lookup item id
 }
 
 func isBidOpen(item string) bool {
-	l := LogInit("isBidOpen-main.go")
-	defer l.End()
 	if _, ok := bids[item]; ok {
 		return true
 	}
-	l.WarnF("Bid not open for: %s\n", item)
+	Warn.Printf("Bid not open for: %s\n", item)
 	return false
 }
 
@@ -399,14 +426,12 @@ type BidItem struct {
 }
 
 func (b *BidItem) startBid() {
-	l := LogInit("startBid-main.go")
-	defer l.End()
 	b.Start = getTime()
-	b.End = b.Start.Add(time.Duration(time.Duration(configuration.BidTimerMinutes) * time.Minute))
+	b.End = b.Start.Add(time.Duration(time.Duration(configuration.Bids.OpenBidTimer) * time.Minute))
 	// time.NewTimer(3 * time.Minute)
-	_, err := discord.ChannelMessageSend(configuration.LootChannelID, fmt.Sprintf("Bids open on %s x%d for %d minutes", b.Item, b.Count, configuration.BidTimerMinutes))
+	_, err := discord.ChannelMessageSend(configuration.Discord.LootChannelID, fmt.Sprintf("Bids open on %s x%d for %d minutes", b.Item, b.Count, configuration.Bids.OpenBidTimer))
 	if err != nil {
-		l.ErrorF("Failed to open bid: %s", err.Error())
+		Err.Printf("Failed to open bid: %s", err.Error())
 	}
 }
 
@@ -415,17 +440,15 @@ func (b *BidItem) isBidEnded() bool {
 }
 
 func (b *BidItem) addBid(user string, item string, amount int) {
-	l := LogInit("addBid-main.go")
-	defer l.End()
 	bidLock.Lock()
 	defer bidLock.Unlock()
 	if _, ok := roster[user]; !ok { // user doesn't exist, no bids to add
-		l.ErrorF("User %s does not exist, refusing bid", user)
+		Err.Printf("User %s does not exist, refusing bid", user)
 		return
 	}
 	// TODO: Lookup user's dkp and make sure they can spend (Players can ALWAYS spend 10 dkp)
-	if amount != 0 && amount%configuration.BidIncrements != 0 {
-		l.ErrorF("Bid from %s for %s is not an increment of %d: %d -> Rounding down", user, item, configuration.BidIncrements, amount)
+	if amount != 0 && amount%configuration.Bids.Increments != 0 {
+		Err.Printf("Bid from %s for %s is not an increment of %d: %d -> Rounding down", user, item, configuration.Bids.Increments, amount)
 		amount = roundDown(amount)
 	}
 	if !hasEnoughDKP(roster[user].Main, amount) { // this works but roster should have their dkp
@@ -445,23 +468,21 @@ func (b *BidItem) addBid(user string, item string, amount int) {
 	}
 
 	// b.Bids = append(b.Bids, bid)
-	l.InfoF("Adding Bid: Player: %s Main: %s MaxDKP: %d\n", bid.Player.Name, bid.Player.Main, bid.Player.DKP)
+	Info.Printf("Adding Bid: Player: %s Main: %s MaxDKP: %d\n", bid.Player.Name, bid.Player.Main, bid.Player.DKP)
 }
 
 func roundDown(n int) int {
 	f := float64(n)
-	fAmount := float64(configuration.BidIncrements)
+	fAmount := float64(configuration.Bids.Increments)
 	rounded := int(math.Round(f/fAmount) * fAmount)
 	if rounded > n {
-		return rounded - configuration.BidIncrements
+		return rounded - configuration.Bids.Increments
 	}
 	return rounded
 }
 
 func (b *BidItem) bidderExists(user string) int {
-	l := LogInit("bidderExists-main.go")
-	defer l.End()
-	l.InfoF("Checking if bidder %s exists in %#+v", user, b)
+	Info.Printf("Checking if bidder %s exists in %#+v", user, b)
 	for k, bidder := range b.Bids {
 		if bidder.Bidder == user {
 			return k
@@ -471,10 +492,8 @@ func (b *BidItem) bidderExists(user string) int {
 }
 
 func (b *BidItem) closeBid() {
-	l := LogInit("closeBid-main.go")
-	defer l.End()
 	// sig := uuid.New()
-	l.InfoF("Bid ended for : %s x%d", b.Item, b.Count)
+	Info.Printf("Bid ended for : %s x%d", b.Item, b.Count)
 	// Handle Bid winnner
 	response := fmt.Sprintf("Winner(s) of %s (%s) x%d", b.Item, b.URL, b.Count)
 	// var winAmount int
@@ -487,8 +506,8 @@ func (b *BidItem) closeBid() {
 			response = fmt.Sprintf("%s for %d is %s", response, winner.Amount, winner.Player.Name)
 		}
 	}
-	response = fmt.Sprintf("%s\n[%s]", response, getPlayerName(configuration.EQLogPath))
-	l.InfoF(response)
+	response = fmt.Sprintf("%s\n[%s]", response, getPlayerName(configuration.Everquest.LogPath))
+	Info.Printf(response)
 	var fields []*discordgo.MessageEmbedField
 	for _, winner := range winners {
 		displayName := winner.Player.Name
@@ -508,8 +527,8 @@ func (b *BidItem) closeBid() {
 	// var provider discordgo.MessageEmbedProvider
 	// provider.Name = sig.String()
 	var footer discordgo.MessageEmbedFooter
-	footer.Text = getPlayerName(configuration.EQLogPath) + " - " + b.Zone
-	footer.IconURL = configuration.DiscordLootIcon
+	footer.Text = getPlayerName(configuration.Everquest.LogPath) + " - " + b.Zone
+	footer.IconURL = configuration.Discord.LootIcon
 
 	embed := discordgo.MessageEmbed{
 		URL:    b.URL,
@@ -518,14 +537,14 @@ func (b *BidItem) closeBid() {
 		Fields: fields,
 		Footer: &footer,
 	}
-	dMsg, err := discord.ChannelMessageSendEmbed(configuration.LootChannelID, &embed)
+	dMsg, err := discord.ChannelMessageSendEmbed(configuration.Discord.LootChannelID, &embed)
 	// _, err := discord.ChannelMessageSend(configuration.LootChannelID, response)
 	if err != nil {
-		l.ErrorF("Error sending discord message: %s", err.Error())
+		Err.Printf("Error sending discord message: %s", err.Error())
 	}
-	err = discord.MessageReactionAdd(configuration.LootChannelID, dMsg.ID, configuration.InvestigationStartEmoji)
+	err = discord.MessageReactionAdd(configuration.Discord.LootChannelID, dMsg.ID, configuration.Discord.InvestigationStartEmoji)
 	if err != nil {
-		l.ErrorF("Error adding base reaction: %s", err.Error())
+		Err.Printf("Error adding base reaction: %s", err.Error())
 	}
 	// addReact(dMsg.ID)
 	b.InvestigationLogs = investigation
@@ -541,8 +560,6 @@ type Winner struct {
 }
 
 func (b *BidItem) getWinners(count int) []Winner {
-	l := LogInit("getWinners-main.go")
-	defer l.End()
 	// Account for no bids (rot)
 	for i := 0; i < count+1; i++ {
 		fakeBid := Bid{
@@ -554,16 +571,16 @@ func (b *BidItem) getWinners(count int) []Winner {
 	// sort.Sort(sort.Reverse(ByBid(b.Bids)))
 	b.Bids = sortBids(b.Bids)
 	// TODO: Account for ties
-	winningbid := b.Bids[count].Amount + configuration.BidIncrements
-	if b.Bids[0].Bidder != "Rot" && winningbid < configuration.MinimumBid {
-		winningbid = configuration.MinimumBid
+	winningbid := b.Bids[count].Amount + configuration.Bids.Increments
+	if b.Bids[0].Bidder != "Rot" && winningbid < configuration.Bids.MinimumBid {
+		winningbid = configuration.Bids.MinimumBid
 	}
 	if b.Bids[count].Player.Rank != b.Bids[count-1].Player.Rank { // If we outrank them minimum bid is 10
-		if configuration.SecondMainsBidAsMains && b.Bids[count].Player.Rank == cMain && b.Bids[count-1].Player.Rank == cSecondMain {
-			l.InfoF("%s was outranked by %s but is a main vs secondmain so ignoring", b.Bids[count].Player.Name, b.Bids[count-1].Player.Name)
+		if configuration.Bids.SecondMainsBidAsMains && (b.Bids[count].Player.Rank == cMain || b.Bids[count].Player.Rank == cSecondMain) && (b.Bids[count-1].Player.Rank == cMain || b.Bids[count-1].Player.Rank == cSecondMain) {
+			Info.Printf("%s was outranked by %s but is a main vs secondmain so ignoring", b.Bids[count].Player.Name, b.Bids[count-1].Player.Name)
 		} else {
-			l.InfoF("%s's rank of %d outranks %s's rank of %d", b.Bids[count-1].Player.Name, b.Bids[count-1].Player.Rank, b.Bids[count].Player.Name, b.Bids[count].Player.Rank)
-			winningbid = configuration.MinimumBid
+			Info.Printf("%s's rank of %d outranks %s's rank of %d", b.Bids[count-1].Player.Name, b.Bids[count-1].Player.Rank, b.Bids[count].Player.Name, b.Bids[count].Player.Rank)
+			winningbid = configuration.Bids.MinimumBid
 		}
 	}
 	if winningbid > b.Bids[0].Amount { // account for ties
@@ -571,16 +588,17 @@ func (b *BidItem) getWinners(count int) []Winner {
 		if winningbid == b.Bids[count-1].Amount && b.Bids[count-1].Bidder != "Rot" {
 			// A ROLL OFF IS NEEDED
 			// Determine AMOUNT of ties
-			l.InfoF("Roll off required!: %#+v vs %#+v\n", b.Bids[count], b.Bids[count-1])
+			Info.Printf("Roll off required!: %#+v vs %#+v\n", b.Bids[count], b.Bids[count-1])
 			var ties int
 			for _, bidder := range b.Bids {
+				// TODO: account for secondmains bidding as mains
 				if bidder.Amount == winningbid && b.Bids[0].Player.Rank == bidder.Player.Rank { // is tied winner
 					ties++
 				}
 			}
 			count = ties     // show winners == amount of ties to imply roll off
 			b.RollOff = true // for logging/replay purposes
-			discord.ChannelMessageSend(configuration.LootChannelID, "Roll off required!")
+			discord.ChannelMessageSend(configuration.Discord.LootChannelID, "Roll off required!")
 		}
 	}
 	var winners []Winner
@@ -611,8 +629,6 @@ func (b *BidItem) getWinners(count int) []Winner {
 }
 
 func sortBids(bids []Bid) []Bid {
-	l := LogInit("sortBids-main.go")
-	defer l.End()
 	var mains []Bid
 	var secondmains []Bid
 	var recruits []Bid
@@ -634,16 +650,16 @@ func sortBids(bids []Bid) []Bid {
 		}
 	}
 	if len(mains) == 0 {
-		l.InfoF("No mains bid on this item")
+		Info.Printf("No mains bid on this item")
 	}
-	if configuration.SecondMainsBidAsMains { // we don't need to do anything if no mains bid
-		if configuration.SecondMainAsMainMaxBid > 0 && len(mains) > 0 { // We need to lower their bids that are > 200 only if mains bid
+	if configuration.Bids.SecondMainsBidAsMains { // we don't need to do anything if no mains bid
+		if configuration.Bids.SecondMainAsMainMaxBid > 0 && len(mains) > 0 { // We need to lower their bids that are > 200 only if mains bid
 			// looping like this uses a copy I think so we need to make a new slice
 			var fixedSMains []Bid
 			for _, sMain := range secondmains {
-				if sMain.Amount > configuration.SecondMainAsMainMaxBid { // They bid too much, so lower it to the max allowed
-					l.InfoF("Secondmain %s bid more than the max allowed of %s, setting to max\n", sMain.Player, configuration.SecondMainAsMainMaxBid)
-					sMain.Amount = configuration.SecondMainAsMainMaxBid
+				if sMain.Amount > configuration.Bids.SecondMainAsMainMaxBid { // They bid too much, so lower it to the max allowed
+					Info.Printf("Secondmain %s bid more than the max allowed of %s, setting to max\n", sMain.Player, configuration.Bids.SecondMainAsMainMaxBid)
+					sMain.Amount = configuration.Bids.SecondMainAsMainMaxBid
 				}
 				fixedSMains = append(fixedSMains, sMain)
 			}
@@ -653,7 +669,7 @@ func sortBids(bids []Bid) []Bid {
 		}
 	}
 	sort.Sort(sort.Reverse(ByBid(mains)))
-	if !configuration.SecondMainsBidAsMains {
+	if !configuration.Bids.SecondMainsBidAsMains {
 		sort.Sort(sort.Reverse(ByBid(secondmains)))
 	}
 	sort.Sort(sort.Reverse(ByBid(recruits)))
@@ -661,7 +677,7 @@ func sortBids(bids []Bid) []Bid {
 	sort.Sort(sort.Reverse(ByBid(inactives)))
 	var winners []Bid
 	winners = append(winners, mains...)
-	if !configuration.SecondMainsBidAsMains {
+	if !configuration.Bids.SecondMainsBidAsMains {
 		winners = append(winners, secondmains...)
 	}
 	winners = append(winners, recruits...)
@@ -686,21 +702,17 @@ func (a ByBid) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 // }
 
 func isItem(name string) int {
-	l := LogInit("isItem-main.go")
-	defer l.End()
 	// itemLock.Lock()
 	// defer itemLock.Unlock()
 	// name = strings.ToLower(name) // Make it lowercase to match database
 	// if _, ok := itemDB[name]; ok {
 	// 	return itemDB[name]
 	// }
-	// l.WarnF("Cannot find item: %s\n", name)
+	// Warn.Printf("Cannot find item: %s\n", name)
 	return itemDB.FindIDByName(name)
 }
 
 func checkClosedBids() {
-	l := LogInit("checkClosedBids-main.go")
-	defer l.End()
 	for k, bi := range bids {
 		if bi.isBidEnded() {
 			bi.closeBid()
@@ -710,17 +722,15 @@ func checkClosedBids() {
 }
 
 func writeArchive(name string, data BidItem) {
-	l := LogInit("writeArchive-main.go")
-	defer l.End()
-	l.InfoF("Writing archive %s to file", name)
+	Info.Printf("Writing archive %s to file", name)
 	file, err := json.MarshalIndent(data, "", " ")
 	if err != nil {
-		l.ErrorF("Error converting to JSON: %s", err.Error())
+		Err.Printf("Error converting to JSON: %s", err.Error())
 	}
 
 	err = ioutil.WriteFile("archive/"+name+".json", file, 0644)
 	if err != nil {
-		l.ErrorF("Error writing archive to file: %s", err.Error())
+		Err.Printf("Error writing archive to file: %s", err.Error())
 	}
 	archives = append(archives, name) // add to known archive
 }
@@ -732,7 +742,7 @@ type Investigation struct {
 
 func (i *Investigation) addLog(l everquest.EqLog) {
 	i.Messages = append(i.Messages, l)
-	if len(i.Messages) > configuration.InvestigationLogLimitMinutes { // remove the oldest log
+	if len(i.Messages) > configuration.Main.InvestigationLogLimitMinutes { // remove the oldest log
 		copy(i.Messages[0:], i.Messages[1:])
 		i.Messages[len(i.Messages)-1] = everquest.EqLog{} // or the zero value of T
 		i.Messages = i.Messages[:len(i.Messages)-1]
@@ -740,34 +750,30 @@ func (i *Investigation) addLog(l everquest.EqLog) {
 }
 
 func getTime() time.Time {
-	if configuration.ReadEntireLog { // We are simulating/testing things, we need to use time from logs
+	if configuration.Main.ReadEntireLog { // We are simulating/testing things, we need to use time from logs
 		return currentTime
 	}
 	return time.Now()
 }
 
 func uploadArchive(id string) {
-	l := LogInit("uploadArchive-main.go")
-	defer l.End()
 	file, err := os.Open("archive/" + id + ".json") // TODO: Account for linux, and maliciousness
 	if err != nil {
-		l.ErrorF("Error finding archive: %s", err.Error())
-		discord.ChannelMessageSend(configuration.InvestigationChannelID, "Error uploading investigation: "+id)
+		Err.Printf("Error finding archive: %s", err.Error())
+		discord.ChannelMessageSend(configuration.Discord.InvestigationChannelID, "Error uploading investigation: "+id)
 	} else {
-		discord.ChannelFileSend(configuration.InvestigationChannelID, id+".json", file)
+		discord.ChannelFileSend(configuration.Discord.InvestigationChannelID, id+".json", file)
 	}
 }
 
 func uploadRaidDump(filename string) {
-	l := LogInit("uploadArchive-main.go")
-	defer l.End()
-	file, err := os.Open(configuration.EQBaseFolder + "/" + filename)
+	file, err := os.Open(configuration.Everquest.BaseFolder + "/" + filename)
 	if err != nil {
-		l.ErrorF("Error finding Raid Dump: %s", err.Error())
-		discord.ChannelMessageSend(configuration.RaidDumpChannelID, "Error uploading Raid Dump: "+filename)
+		Err.Printf("Error finding Raid Dump: %s", err.Error())
+		discord.ChannelMessageSend(configuration.Discord.RaidDumpChannelID, "Error uploading Raid Dump: "+filename)
 	} else {
 		if raidDumps == 0 {
-			DiscordF(configuration.RaidDumpChannelID, "%s uploaded an on-time raid dump at %s for %s", getPlayerName(configuration.EQLogPath), getTime().String(), currentZone)
+			DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded an on-time raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
 			raidDumps++
 			// Start timer
 			raidStart = getTime().Round(1 * time.Hour)
@@ -777,13 +783,47 @@ func uploadRaidDump(filename string) {
 				raidDumps++
 				nextDump = nextDump.Add(1 * time.Hour)
 				needsDump = false
-				DiscordF(configuration.RaidDumpChannelID, "%s uploaded an hourly raid dump at %s for %s", getPlayerName(configuration.EQLogPath), getTime().String(), currentZone)
+				DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded an hourly raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
 			} else {
-				DiscordF(configuration.RaidDumpChannelID, "%s uploaded a boss kill raid dump at %s for %s", getPlayerName(configuration.EQLogPath), getTime().String(), currentZone)
+				DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded a boss kill raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
 			}
 		}
-		discord.ChannelFileSend(configuration.RaidDumpChannelID, filename, file)
+		discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, filename, file)
 	}
+}
+
+func uploadGuildDump(filename string) {
+	var guild everquest.Guild
+	guild.LoadFromPath(Err, configuration.Everquest.BaseFolder+"/"+filename)
+	//Encode the data
+	postBody, _ := json.Marshal(guild)
+	responseBody := bytes.NewBuffer(postBody)
+	// Create a Bearer string by appending string access token
+	var bearer = "Bearer " + configuration.Main.GuildUploadLicense
+
+	// Create a new request using http
+	req, err := http.NewRequest(http.MethodPost, configuration.Main.GuildUploadAPIURL, responseBody)
+	if err != nil {
+		log.Println("Error creating request.\n[ERROR] -", err)
+	}
+
+	// add authorization header to the req
+	req.Header.Add("Authorization", bearer)
+	req.Header.Add("Content-Type", "application/json")
+
+	// Send req using http Client
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error on response.\n[ERROR] -", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error while reading the response bytes:", err)
+	}
+	log.Println(string([]byte(body)))
 }
 
 // func checkReactions() {
@@ -791,8 +831,6 @@ func uploadRaidDump(filename string) {
 // }
 
 func getArchiveList() []string { // TODO: get directory listing on archives
-	l := LogInit("getArchiveList-main.go")
-	defer l.End()
 	var files []string
 
 	root := "./archive"
@@ -802,7 +840,7 @@ func getArchiveList() []string { // TODO: get directory listing on archives
 		return nil
 	})
 	if err != nil {
-		l.ErrorF("Error reading archives: %s", err.Error())
+		Err.Printf("Error reading archives: %s", err.Error())
 	}
 	return files
 }
@@ -817,8 +855,6 @@ func isArchive(id string) bool {
 }
 
 func loadRoster(file string) {
-	l := LogInit("loadRoster-main.go")
-	defer l.End()
 	csvfile, err := os.Open(file)
 	if err != nil {
 		log.Fatalln("Couldn't open the roster csv file", err)
@@ -844,7 +880,7 @@ func loadRoster(file string) {
 			break
 		}
 		if err != nil {
-			l.ErrorF("Error loading roster: %s", err.Error())
+			Err.Printf("Error loading roster: %s", err.Error())
 		}
 		var player Player
 		player.Name = record[0]
@@ -859,13 +895,13 @@ func loadRoster(file string) {
 			player.Rank = cAlt // Default to alt for now
 			// Figure out if secondmain, alt, recruit
 			// Figure out alt's main
-			r, _ := regexp.Compile(configuration.RegexIsAlt) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
+			r, _ := regexp.Compile(configuration.Everquest.RegexIsAlt) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
 			Altresult := r.FindStringSubmatch(record[7])
 			if len(Altresult) > 0 {
 				player.Main = Altresult[1]
 			}
 			// Figure out secondmain and it's main
-			r, _ = regexp.Compile(configuration.RegexIs2ndMain) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
+			r, _ = regexp.Compile(configuration.Everquest.RegexIsSecondMain) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
 			SecondMainResult := r.FindStringSubmatch(record[7])
 			if len(SecondMainResult) > 0 {
 				player.Main = SecondMainResult[1]
@@ -886,7 +922,7 @@ func loadRoster(file string) {
 		}
 		roster[player.Name] = &player
 	}
-	l.InfoF("Loaded Roster")
+	Info.Printf("Loaded Roster")
 }
 
 // func dumpPlayers() {
@@ -907,7 +943,7 @@ type Player struct {
 }
 
 func isRaider(rank string) bool {
-	for _, r := range configuration.GuildRaidingRoles {
+	for _, r := range configuration.Everquest.GuildRaidingRanks {
 		if r == rank {
 			return true
 		}
@@ -916,15 +952,13 @@ func isRaider(rank string) bool {
 }
 
 func updatePlayerDKP(name string, dkp int) {
-	l := LogInit("updatePlayerDKP-commands.go")
-	defer l.End()
 	rosterLock.Lock()
 	defer rosterLock.Unlock()
 	if _, ok := roster[name]; ok {
 		roster[name].DKP = dkp
 		return
 	}
-	l.ErrorF("Cannot find player to update DKP: %s giving them 0 dkp", name)
+	Err.Printf("Cannot find player to update DKP: %s giving them 0 dkp", name)
 	// DiscordF("Error configuring %s's DKP, are they on the DKP sheet, Roster Dump, and are the Guild Notes correct?", name)
 	roster[name] = &Player{
 		Name:  name,
@@ -938,8 +972,6 @@ func updatePlayerDKP(name string, dkp int) {
 }
 
 func hasEnoughDKP(name string, amount int) bool {
-	l := LogInit("hasEnoughDKP-commands.go")
-	defer l.End()
 	rosterLock.Lock()
 	defer rosterLock.Unlock()
 	var bHasDKP bool
@@ -949,13 +981,11 @@ func hasEnoughDKP(name string, amount int) bool {
 	if amount < 10 || (bHasDKP && roster[name].DKP >= amount) { // You can always spend 10dkp
 		return true
 	}
-	l.WarnF("%s does not have %d DKP but tried to spend it", name, amount)
+	Warn.Printf("%s does not have %d DKP but tried to spend it", name, amount)
 	return false
 }
 
 func getMaxDKP(name string) int {
-	l := LogInit("getMaxDKP-commands.go")
-	defer l.End()
 	rosterLock.Lock()
 	defer rosterLock.Unlock()
 	if _, ok := roster[name]; ok {
@@ -964,7 +994,7 @@ func getMaxDKP(name string) int {
 		}
 		return roster[name].DKP
 	}
-	l.ErrorF("Cannot obtain max DKP for %s", name)
+	Err.Printf("Cannot obtain max DKP for %s", name)
 	return -5
 }
 
@@ -988,7 +1018,7 @@ func getMaxDKP(name string) int {
 // 	for k := range needsReact {
 // 		err := discord.MessageReactionAdd(configuration.LootChannelID, k, configuration.InvestigationStartEmoji)
 // 		if err != nil {
-// 			l.ErrorF("Error adding base reaction: %s", err.Error())
+// 			Err.Printf("Error adding base reaction: %s", err.Error())
 // 		} else {
 // 			removeReact(k)
 // 		}
@@ -1010,12 +1040,10 @@ func getPlayerName(logFile string) string {
 }
 
 func getRecentRosterDump(path string) string {
-	l := LogInit("getRecentRosterDump-commands.go")
-	defer l.End()
 	var files []string
 
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-		if strings.HasPrefix(filepath.Base(path), configuration.GuildName) {
+		if strings.HasPrefix(filepath.Base(path), configuration.Everquest.GuildName) {
 			files = append(files, filepath.Base(path))
 		}
 		return nil
@@ -1027,7 +1055,7 @@ func getRecentRosterDump(path string) string {
 	// 	fmt.Println(file)
 	// }
 	if !isDumpOutOfDate(files[len(files)-1]) {
-		DiscordF(configuration.InvestigationChannelID, "**Guild dump %s is out of date, this needs updated with ALL members (including offline and alts) before bidbot is ran**", files[len(files)-1])
+		DiscordF(configuration.Discord.InvestigationChannelID, "**Guild dump %s is out of date, this needs updated with ALL members (including offline and alts) before bidbot is ran**", files[len(files)-1])
 	}
 
 	return files[len(files)-1] // return last file - should be latest
@@ -1041,7 +1069,7 @@ func getRecentRosterDump(path string) string {
 	// 		timeString := spltFile[1] + "-" + spltFile[2] // only parse the time
 	// 		t, err := time.Parse("20060102-150405", timeString)
 	// 		if err != nil {
-	// 			l.ErrorF("Error parsing time of roster dump: %s", err.Error())
+	// 			Err.Printf("Error parsing time of roster dump: %s", err.Error())
 	// 		}
 	// 		times = append(times, t)
 	// 	}
@@ -1050,12 +1078,10 @@ func getRecentRosterDump(path string) string {
 }
 
 func isDumpOutOfDate(dump string) bool {
-	l := LogInit("isDumpOutOfDate-commands.go")
-	defer l.End()
 	// Vets of Norrath_aradune-20210124-083635
 	// location, err := time.LoadLocation("America/Chicago")
 	// if err != nil {
-	// 	l.ErrorF("Error parsing tz : %s", err.Error())
+	// 	Err.Printf("Error parsing tz : %s", err.Error())
 	// }
 	t := getTime()
 	zone, _ := t.Zone()
@@ -1064,9 +1090,9 @@ func isDumpOutOfDate(dump string) bool {
 	logDate, err := time.Parse(format, name[1]+zone)
 	// logDate = logDate.In(location)
 	if err != nil {
-		l.ErrorF("Error parsing time of guild dump : %s", err.Error())
+		Err.Printf("Error parsing time of guild dump : %s", err.Error())
 	}
-	l.InfoF("LogDate: %s before Now: %s After: %s", logDate.String(), getTime().String(), getTime().Add(-24*time.Hour).String())
+	Info.Printf("LogDate: %s before Now: %s After: %s", logDate.String(), getTime().String(), getTime().Add(-24*time.Hour).String())
 	return logDate.Before(getTime()) && logDate.After(getTime().Add(-24*time.Hour))
 }
 

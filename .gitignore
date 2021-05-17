@@ -1,4 +1,5 @@
 config.json
+config.toml
 *.log
 *.exe
 *.txt
