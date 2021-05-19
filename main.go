@@ -153,8 +153,9 @@ func main() {
 	// fmt.Println(itemDB["Vyemm's Fang"])
 	loadRoster(configuration.Everquest.BaseFolder + "/" + getRecentRosterDump(configuration.Everquest.BaseFolder)) // needs to run AFTER discord is initialized
 	ChatLogs = make(chan everquest.EqLog)
-	go everquest.BufferedLogRead(configuration.Everquest.LogPath, configuration.Main.ReadEntireLog, configuration.Main.LogPollRate, ChatLogs, nil)
-	go parseLogs()
+	Quit := make(chan bool, 1)
+	go everquest.BufferedLogRead(configuration.Everquest.LogPath, configuration.Main.ReadEntireLog, configuration.Main.LogPollRate, ChatLogs, Quit)
+	go parseLogs(Quit)
 
 	// // Register the messageCreate func as a callback for MessageCreate events.
 	// dg.AddHandler(messageCreate)
@@ -172,9 +173,11 @@ func main() {
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	Info.Printf("Bot is now running")
+	DiscordF(configuration.Discord.InvestigationChannelID, "**BidBot online**\n> Secondmains bid as mains: %t\n> Secondmain max bid: %d (0 means infinite)", configuration.Bids.SecondMainsBidAsMains, configuration.Bids.SecondMainAsMainMaxBid)
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
+	Quit <- true
 }
 
 func printHUD() {
@@ -195,12 +198,17 @@ func printHUD() {
 	}
 }
 
-func parseLogs() {
+func parseLogs(quit <-chan bool) {
 	Info.Printf("Parsing logs")
 	printHUD()
 	for msgs := range ChatLogs {
 		checkClosedBids()
 		parseLogLine(msgs)
+		select {
+		case <-quit:
+			return
+		default:
+		}
 	}
 }
 
@@ -210,7 +218,7 @@ func parseLogLine(log everquest.EqLog) {
 	// 	// fmt.Printf("Channel: %s\n", l.channel)
 	// }
 	if !needsDump && getTime().Round(5*time.Minute) == nextDump.Round(5*time.Minute) {
-		DiscordF(configuration.Discord.RaidDumpChannelID, "Time for another hourly raid dump!")
+		DiscordF(configuration.Discord.InvestigationChannelID, "Time for another hourly raid dump!")
 		needsDump = true
 	}
 	if log.Channel == "guild" {
@@ -258,8 +266,16 @@ func parseLogLine(log everquest.EqLog) {
 
 	}
 	if log.Channel == "say" { // Guzz says, 'Hail, a spell jammer'
-		if strings.Contains(log.Msg, "Hail, A Planar Projection") || strings.Contains(log.Msg, "Hail, Tarkil Adan") || strings.Contains(log.Msg, "Hail, Essence of Fire") || strings.Contains(log.Msg, "Hail, Essence of Water") || strings.Contains(log.Msg, "Hail, Essence of Earth") || strings.Contains(log.Msg, "Hail, Essence of Air") {
+		if checkFlagGivers(log.Msg) {
 			DiscordF(configuration.Discord.FlagChannelID, "%s got the flag from %s\n", log.Source, currentZone)
+		}
+	}
+
+	if strings.Contains(strings.ToLower(log.Channel), strings.ToLower(configuration.Everquest.ParseChannel)) {
+		if strings.Contains(log.Msg, configuration.Everquest.ParseIdentifier) {
+			i := strings.Index(log.Msg, "'")
+			out := strings.ReplaceAll(log.Msg[i:], "'", "")
+			DiscordF(configuration.Discord.ParseChannelID, "> %s provided a parse\n```%s```", log.Source, out)
 		}
 	}
 	if log.Channel == "tell" {
@@ -341,7 +357,7 @@ func parseLogLine(log everquest.EqLog) {
 					DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
 				}
 			}
-			if result[2] == "Ethereal Parchment" || result[2] == "Spectral Parchment" || result[2] == "Glyphed Rune Word" {
+			if isSpellProvider(result[2]) {
 				// TODO: Lookup what class will get this and add it to the loot message
 				DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s", result[1], result[2], result[3])
 			}
@@ -356,6 +372,15 @@ func parseLogLine(log everquest.EqLog) {
 	}
 }
 
+func isSpellProvider(item string) bool {
+	for _, sitem := range configuration.Everquest.SpellProvider {
+		if item == sitem {
+			return true
+		}
+	}
+	return false
+}
+
 func removeFromSlice(slice []Bid, s int) []Bid {
 	return append(slice[:s], slice[s+1:]...)
 }
@@ -368,6 +393,15 @@ func removeLootFromLooted(item string) {
 		}
 	}
 	needsLooted = append(needsLooted[:itemPos], needsLooted[itemPos+1:]...)
+}
+
+func checkFlagGivers(msg string) bool {
+	for _, flaggiver := range configuration.Everquest.FlagGiver {
+		if strings.Contains(msg, flaggiver) {
+			return true
+		}
+	}
+	return false
 }
 
 func openBid(item string, count int, id int) {

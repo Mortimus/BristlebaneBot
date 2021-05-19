@@ -3,7 +3,8 @@ module github.com/Mortimus/BristlebaneBot
 go 1.16
 
 require (
-	github.com/Mortimus/goEverquest v0.0.0-20210517151726-6875b10d9bfa
+	cloud.google.com/go v0.82.0 // indirect
+	github.com/Mortimus/goEverquest v0.0.0-20210518134015-c32e818be108
 	github.com/bwmarrin/discordgo v0.23.2
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect

@@ -68,18 +68,23 @@ type Discord struct {
 	RaidDumpChannelID        string   `comment:"Discord channel to send raid dumps to"`
 	SpellDumpChannelID       string   `comment:"Discord channel to send spell loot to"`
 	FlagChannelID            string   `comment:"Discord channel to send acquired flags to"`
+	ParseChannelID           string   `comment:"Discord channel to send parses to"`
 }
 
 type Everquest struct {
 	LogPath           string   `comment:"path to character log file"`
-	ItemDB            string   `comment:"path to the eqitems item database""`
+	ItemDB            string   `comment:"path to the eqitems item database"`
 	SpellDB           string   `comment:"path to the lucydb spell database"`
-	GuildRaidingRanks []string `comment:"Guild Ranks that can bid on items`
+	GuildRaidingRanks []string `comment:"Guild Ranks that can bid on items"`
 	RegexIsAlt        string   `comment:"Regex to determine if character is an alt"`
 	RegexIsSecondMain string   `comment:"Regex to determine if character is a 2nd main"`
 	GuildName         string   `comment:"Guild name to determine guild dumps"`
 	BaseFolder        string   `comment:"Base folder where eqgame.exe is located, for determining logs and dumps"`
 	RegexLoot         string   `comment:"Regex to detect when an item has been looted"`
+	FlagGiver         []string `comment:"log text for a character getting a flag - Hail, a planar projection"`
+	ParseIdentifier   string   `comment:"string that a parse dump will contain"`
+	ParseChannel      string   `comment:"everquest channel to monitor for parses"`
+	SpellProvider     []string `comment:"item that provides a spell like Spectral Parchment"`
 }
 
 type Google struct {
