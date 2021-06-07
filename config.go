@@ -1,109 +1,154 @@
 package main
 
 import (
-	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
-)
 
-const configPath = "config.json"
-const failPath = "C:\\"
+	"github.com/pelletier/go-toml"
+)
 
 var configuration Configuration
 
-// Configuration stores all our user defined variables
-type Configuration struct {
-	LogLevel                     int       `json:"LogLevel"`                     // 0=Off,1=Error,2=Warn,3=Info,4=Debug
-	LogPath                      string    `json:"LogPath"`                      // Where to write logs to
-	EQLogPath                    string    `json:"EQLogPath"`                    // Where to read logs from
-	EQBaseLogLine                string    `json:"EQBaseLogLine"`                // Regex for a eq log line
-	ReadEntireLog                bool      `json:"ReadEntireLog"`                // Read the entire log or only new
-	LogPollRate                  int       `json:"LogPollRate"`                  // How often to read the log if it reaches EOF in seconds
-	LucyItems                    string    `json:"LucyItems"`                    // Lucy items .txt
-	BidTimerMinutes              int       `json:"BidTimerMinutes"`              // How many minutes bids are open
-	MinimumBid                   int       `json:"MinimumBid"`                   // Minimum Bid Amount
-	BidIncrements                int       `json:"BidIncrements"`                // Bids must be a multiple of this
-	LucyURLPrefix                string    `json:"LucyURLPrefix"`                // Lucy URL prefix for creating item links
-	DiscordToken                 string    `json:"DiscordToken"`                 // Discord Bot Token for Authentication
-	LootChannelID                string    `json:"LootChannelID"`                // Channel ID on where to send open Bids and winners
-	InvestigationChannelID       string    `json:"InvestigationChannelID"`       // Channel ID on where to send archive json files for investigation
-	InvestigationLogLimitMinutes int       `json:"InvestigationLogLimitMinutes"` // How many tells to append to archives for investigation
-	DiscordLootIcon              string    `json:"DiscordLootIcon"`              // Icon to show for discord rich message
-	InvestigationStartEmoji      string    `json:"InvestigationStartEmoji"`      // Emoji required to start an investigation
-	InvestigationStartMinReq     int       `json:"InvestigationStartMinReq"`     // Amount of emoji required from priv users to start an investigation
-	GuildRaidingRoles            []string  `json:"GuildraidingRoles"`            // Roles that would be a raider, raider+officer/leader/etc
-	RegexIsAlt                   string    `json:"RegexIsAlt"`                   // Regex to find out alt's main
-	RegexIs2ndMain               string    `json:"RegexIs2ndMain"`               // Regex to find out if secondmain and main's name
-	AccessToken                  string    `json:"access_token"`                 // Google Access Token
-	TokenType                    string    `json:"token_type"`                   // Google Token Type
-	RefreshToken                 string    `json:"refresh_token"`                // Google Refresh Token
-	Expiry                       time.Time `json:"expiry"`                       // Google Expiration Date
-	ClientID                     string    `json:"client_id"`                    // Google Client ID
-	ProjectID                    string    `json:"project_id"`                   // Google Project ID
-	AuthURI                      string    `json:"auth_uri"`                     // Google Auth URI
-	TokenURI                     string    `json:"token_uri"`                    // Google Token URI
-	AuthProviderx509CertURL      string    `json:"auth_provider_x509_cert_url"`  // Google Cert URL
-	ClientSecret                 string    `json:"client_secret"`                // Google Client Secret
-	RedirectURIs                 []string  `json:"redirect_uris"`                // Google Redirect URIs
-	DKPSheetURL                  string    `json:"DKPSheetURL"`                  // Google sheets url for the DKP sheet
-	DKPSummarySheetName          string    `json:"DKPSummarySheetName"`          // Google sheets sheet name for the DKP lookup
-	DKPSummarySheetPlayerCol     int       `json:"DKPSummarySheetPlayerCol"`     // Google sheet sheet column for player names
-	DKPSummarySheetDKPCol        int       `json:"DKPSummarySheetDKPCol"`        // Google sheet sheet column for dkp
-	DiscordPrivRoles             []string  `json:"DiscordPrivRoles"`             // Discord Roles that are allowed to start investigations
-	DiscordGuildID               string    `json:"DiscordGuildID"`               // Discord Guild ID
-	RegexClosedBid               string    `json:"RegexClosedBid"`               // Regex for detecting a bid being closed
-	RegexOpenBid                 string    `json:"RegexOpenBid"`                 // Regex for detecting a bid being opened
-	RegexTellBid                 string    `json:"RegexTellBid"`                 // Regex for detecting a bid being sent via tell
-	GuildName                    string    `json:"GuildName"`                    // GuildName is the full string of the guild name to determine guild dump files
-	EQBaseFolder                 string    `json:"EQBaseFolder"`                 // Base EQ folder (where eqgame.exe is) to find guild dumps
-	BidsOnlyCloseAutomatically   bool      `json:"BidsOnlyCloseAutomatically"`   // If true, bids close by time, if false it closes by message
-	IsOffNight                   bool      `json:"IsOffNight"`                   // If it's an offnight then secondmains count as mains
-}
+var configPath = "config.toml"
 
 func init() {
-	readConfig()
-	log.Printf("Configuration loaded:\n %+v\n", configuration)
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exPath := filepath.Dir(ex)
+	configuration, err = loadConfig(exPath + "/" + configPath)
+	if err != nil {
+		configuration, err = loadConfig(configPath)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		configPath = exPath + "/" + configPath
+	}
 }
 
-func readConfig() error {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		log.Println(err)
-	}
-	if _, err := os.Stat(dir + "/" + configPath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
-		dir, _ = os.Getwd()
-	}
-	if _, err := os.Stat(dir + "/" + configPath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
-		dir = failPath
-	}
-	if _, err := os.Stat(dir + "/" + configPath); os.IsNotExist(err) {
-		// path/to/whatever does not exist
-		log.Fatal(err)
-	}
-	file, err := os.OpenFile(dir+"/"+configPath, os.O_RDONLY, 0444)
-	defer file.Close()
-	if err != nil {
-		return err
-	}
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&configuration)
-	if err != nil {
-		return err
-	}
-	return nil
+type Main struct {
+	ReadEntireLog                bool   `comment:"Should we read the entire character log or just new entries"`
+	LogPollRate                  int    `comment:"How often to check for new entries in the character log in seconds"`
+	LucyURLPrefix                string `comment:"URL prefix for generating links based on item ID"`
+	InvestigationLogLimitMinutes int    `comment:"How many minutes of chat to log for an investigation"`
+	GuildUploadAPIURL            string `comment:"URL for uploadiing Guild dumps to the discord bot"`
+	GuildUploadLicense           string `comment:"License key for uploading guild dumps"`
 }
 
-func saveConfig() error {
-	marshalledConfig, _ := json.MarshalIndent(configuration, "", "\t")
-	err := ioutil.WriteFile(configPath, marshalledConfig, 0644)
+type SpellOverride struct {
+	Name    string `comment:"Name of spell to override"`
+	SpellID int    `comment:"ID of overrode spell"`
+}
+
+type Bids struct {
+	OpenBidTimer           int    `comment:"Number of minutes to keep bids open before auto closing"`
+	MinimumBid             int    `comment:"Minimum bid accepted - 10"`
+	Increments             int    `comment:"Increment multiple for bids - 5"`
+	RegexClosedBid         string `comment:"Regex to detect a bid has been closed"`
+	RegexOpenBid           string `comment:"Regex to detect a bid has been opened"`
+	RegexTellBid           string `comment:"Regex to detect a bid being sent via tell"`
+	CloseAutomatically     bool   `comment:"Close bids automatically after timer has expired"`
+	SecondMainsBidAsMains  bool   `comment:"Will second mains be tiered the same as mains"`
+	SecondMainAsMainMaxBid int    `comment:"Max value that bids can bid against mains, set to 0 for infinite"`
+}
+
+type Discord struct {
+	Token                    string   `comment:"Discord Bot Token"`
+	LootChannelID            string   `comment:"Discord Channel to sent loot to"`
+	InvestigationChannelID   string   `comment:"Discord Channel to sent investigations to"`
+	LootIcon                 string   `comment:"Icon used for the loot in discord"`
+	InvestigationStartEmoji  string   `comment:"Emoji response used to start an investigation"`
+	InvestigationMinRequired int      `comment:"Number of reactions required to start investigation"`
+	PrivRoles                []string `comment:"Discord roles that are considered privledged, for starting investigations"`
+	GuildID                  string   `comment:"Discord Guild ID"`
+	RaidDumpChannelID        string   `comment:"Discord channel to send raid dumps to"`
+	SpellDumpChannelID       string   `comment:"Discord channel to send spell loot to"`
+	FlagChannelID            string   `comment:"Discord channel to send acquired flags to"`
+	ParseChannelID           string   `comment:"Discord channel to send parses to"`
+}
+
+type Everquest struct {
+	LogPath           string   `comment:"path to character log file"`
+	ItemDB            string   `comment:"path to the eqitems item database"`
+	SpellDB           string   `comment:"path to the lucydb spell database"`
+	GuildRaidingRanks []string `comment:"Guild Ranks that can bid on items"`
+	RegexIsAlt        string   `comment:"Regex to determine if character is an alt"`
+	RegexIsSecondMain string   `comment:"Regex to determine if character is a 2nd main"`
+	GuildName         string   `comment:"Guild name to determine guild dumps"`
+	BaseFolder        string   `comment:"Base folder where eqgame.exe is located, for determining logs and dumps"`
+	RegexLoot         string   `comment:"Regex to detect when an item has been looted"`
+	FlagGiver         []string `comment:"log text for a character getting a flag - Hail, a planar projection"`
+	ParseIdentifier   string   `comment:"string that a parse dump will contain"`
+	ParseChannel      string   `comment:"everquest channel to monitor for parses"`
+	SpellProvider     []string `comment:"item that provides a spell like Spectral Parchment"`
+}
+
+type Google struct {
+	AccessToken             string
+	TokenType               string
+	RefreshToken            string
+	Expiry                  time.Time
+	ClientID                string
+	ProjectID               string
+	AuthURI                 string
+	TokenURI                string
+	AuthProviderx509CertURL string
+	ClientSecret            string
+	RedirectURIs            []string
+}
+
+type Sheets struct {
+	DKPSheetURL              string `comment:"Google sheets url for the DKP sheet"`         // Google sheets url for the DKP sheet
+	DKPSummarySheetName      string `comment:"Google sheets sheet name for the DKP lookup"` // Google sheets sheet name for the DKP lookup
+	DKPSummarySheetPlayerCol int    `comment:"Google sheet sheet column for player names"`  // Google sheet sheet column for player names
+	DKPSummarySheetDKPCol    int    `comment:"Google sheet sheet column for dkp count"`
+	SpellSheetURL            string `comment:"Google sheets sheet URL for the spell lookup"`          // Google sheets sheet URL for the spell lookup
+	SpellSheetSpellCol       int    `comment:"Google sheet sheet column for spell names"`             // Google sheet sheet column for spell names
+	SpellSheetPlayerStartCol int    `comment:"Google sheet sheet column for when player names start"` // Google sheet sheet column for when player names start
+	SpellSheetDataRowStart   int    `comment:"Google sheet sheet row for when spell names start"`     // Google sheet sheet row for when spell names start
+	SpellSheetPlayerRow      int    `comment:"Google sheet sheet row for when player names start"`
+}
+
+type Log struct {
+	Level int    `comment:"How much to log Warn:0 Err:1 Info:2 Debug:3"`
+	Path  string `comment:"Where to store the log file use linux formatting or escape slashes for windows"`
+}
+
+type Configuration struct {
+	Main      Main
+	Everquest Everquest
+	Log       Log
+	Bids      Bids
+	Discord   Discord
+	Google    Google
+	Sheets    Sheets
+	Overrides []SpellOverride `comment:"Spell that finds as wrong ID, force an ID here"`
+}
+
+func loadConfig(path string) (Configuration, error) {
+	config := Configuration{}
+	configFile, err := ioutil.ReadFile(path)
 	if err != nil {
-		return err
+		return config, err
 	}
-	log.Printf("Config Saved to %s\n", configPath)
-	return nil
+	err = toml.Unmarshal(configFile, &config)
+	if err != nil {
+		return config, err
+	}
+	return config, nil
+}
+
+func (c Configuration) save(path string) {
+	out, err := toml.Marshal(c)
+	if err != nil {
+		Err.Printf("Error marshalling config: %s", err.Error())
+	}
+	err = ioutil.WriteFile(path, out, 0644)
+	if err != nil {
+		Err.Printf("Error writing config: %s", err.Error())
+	}
 }

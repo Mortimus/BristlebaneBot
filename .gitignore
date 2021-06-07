@@ -1,7 +1,11 @@
 config.json
+config.toml
 *.log
 *.exe
 *.txt
 archive/*
 .vscode/*
 Release/*
+*.7z
+*.zip
+*.json

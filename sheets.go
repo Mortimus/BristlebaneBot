@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	everquest "github.com/Mortimus/goEverquest"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/sheets/v4"
 )
@@ -16,68 +17,60 @@ var srv *sheets.Service
 
 // Retrieve a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config) *http.Client {
-	l := LogInit("getClient-main.go")
-	defer l.End()
 	// The file token.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
 	// time.
 	// tokFile := "token.json"
-	l.InfoF("Fake loading token from file")
+	Info.Printf("Fake loading token from file")
 	tok, err := tokenFromFile("")
 	if err != nil {
-		l.InfoF("Token failed to load, loading from web")
+		Info.Printf("Token failed to load, loading from web")
 		tok = getTokenFromWeb(config)
-		l.InfoF("Saving token")
+		Info.Printf("Saving token")
 		saveToken("", tok)
 	}
-	l.DebugF("Using Token: %+v", tok)
+	Debug.Printf("Using Token: %+v", tok)
 	return config.Client(context.Background(), tok)
 }
 
 // Request a token from the web, then returns the retrieved token.
 func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
-	l := LogInit("getTokenFromWeb-main.go")
-	defer l.End()
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser then type the "+
 		"authorization code: \n%v\n", authURL)
-	l.InfoF("Requesting user navigate to: %s", authURL)
+	Info.Printf("Requesting user navigate to: %s", authURL)
 	var authCode string
 	if _, err := fmt.Scan(&authCode); err != nil {
-		l.FatalF("Unable to read authorization code: %v", err)
+		Err.Fatalf("Unable to read authorization code: %v", err)
 	}
 
 	tok, err := config.Exchange(context.TODO(), authCode)
 	if err != nil {
-		l.FatalF("Unable to retrieve token from web: %v", err)
+		Err.Fatalf("Unable to retrieve token from web: %v", err)
 	}
-	l.InfoF("Return token: %+v", tok)
+	Info.Printf("Return token: %+v", tok)
 	return tok
 }
 
 // Retrieves a token from a local file.
 func tokenFromFile(file string) (*oauth2.Token, error) {
-	l := LogInit("tokenFromFile-main.go")
-	defer l.End()
 	// f, err := os.Open(file)
 	// if err != nil {
 	// 	return nil, err
 	// }
 	// defer f.Close()
 	tok := &oauth2.Token{}
-	tok.AccessToken = configuration.AccessToken
-	tok.Expiry = configuration.Expiry
-	tok.RefreshToken = configuration.RefreshToken
-	tok.TokenType = configuration.TokenType
+	tok.AccessToken = configuration.Google.AccessToken
+	tok.Expiry = configuration.Google.Expiry
+	tok.RefreshToken = configuration.Google.RefreshToken
+	tok.TokenType = configuration.Google.TokenType
 	// err = json.NewDecoder(f).Decode(tok)
-	l.InfoF("Returning token: %+v", tok)
+	Info.Printf("Returning token: %+v", tok)
 	return tok, nil
 }
 
 // Saves a token to a file path.
 func saveToken(path string, token *oauth2.Token) {
-	l := LogInit("saveToken-main.go")
-	defer l.End()
 	// fmt.Printf("Saving credential file to: %s\n", path)
 	// f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	// if err != nil {
@@ -85,12 +78,12 @@ func saveToken(path string, token *oauth2.Token) {
 	// }
 	// defer f.Close()
 	// json.NewEncoder(f).Encode(token)
-	configuration.AccessToken = token.AccessToken
-	configuration.Expiry = token.Expiry
-	configuration.RefreshToken = token.RefreshToken
-	configuration.TokenType = token.TokenType
-	l.InfoF("Saved token to configuration")
-	saveConfig()
+	configuration.Google.AccessToken = token.AccessToken
+	configuration.Google.Expiry = token.Expiry
+	configuration.Google.RefreshToken = token.RefreshToken
+	configuration.Google.TokenType = token.TokenType
+	Info.Printf("Saved token to configuration")
+	configuration.save(configPath)
 }
 
 // Inst is an installed struct for google
@@ -110,38 +103,86 @@ type Gtoken struct {
 }
 
 func updateDKP() {
-	l := LogInit("lookupPlayer-commands.go")
-	defer l.End()
-	spreadsheetID := configuration.DKPSheetURL
-	readRange := configuration.DKPSummarySheetName
+	spreadsheetID := configuration.Sheets.DKPSheetURL
+	readRange := configuration.Sheets.DKPSummarySheetName
 	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, readRange).Do()
 	if err != nil {
-		l.ErrorF("Unable to retrieve data from sheet: %v", err)
+		Err.Printf("Unable to retrieve data from sheet: %v", err)
 		return
 	}
 
 	if len(resp.Values) == 0 {
-		l.ErrorF("Cannot read dkp sheet: %v", resp)
+		Err.Printf("Cannot read dkp sheet: %v", resp)
 		// log.Println("No data found.")
 	} else {
 		// var lastClass string
-		for _, row := range resp.Values {
-			// if row[0] == "Necromancer" {
-			// 	fmt.Printf("%s: %s\n", row[2], row[6])
-			// }
-			// l.TraceF("Player: %s Target: %s", row[configuration.DKPSRosterSheetPlayerCol], strings.TrimSpace(tar))
-			name := fmt.Sprintf("%s", row[configuration.DKPSummarySheetPlayerCol])
+		for i, row := range resp.Values {
+			if i == 0 { // skip the header
+				continue
+			}
+			name := fmt.Sprintf("%s", row[configuration.Sheets.DKPSummarySheetPlayerCol])
 			name = strings.TrimSpace(name)
 			if name != "" {
-				sDKP := fmt.Sprintf("%s", row[configuration.DKPSummarySheetDKPCol])
+				sDKP := fmt.Sprintf("%s", row[configuration.Sheets.DKPSummarySheetDKPCol])
 				sDKP = strings.ReplaceAll(sDKP, ",", "")
 				dkp, err := strconv.Atoi(sDKP)
 				if err != nil {
-					l.ErrorF("Error converting DKP to int: %s", err.Error())
+					Err.Printf("Error converting DKP to int: %s", err.Error())
 					continue
 				}
 				updatePlayerDKP(name, dkp)
 			}
 		}
 	}
+}
+
+func findWhoNeedsSpell(s everquest.Spell) []string {
+	spreadsheetID := configuration.Sheets.SpellSheetURL
+	classes := s.GetClasses()
+	var players []string
+	for _, class := range classes {
+		if class == "Unknown" {
+			continue
+		}
+		Info.Printf("Finding who from class %s needs %s\n", class, s.Name)
+		resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, class).Do()
+		if err != nil {
+			Err.Printf("Unable to retrieve data from sheet: %v", err)
+			return nil
+		}
+
+		if len(resp.Values) == 0 {
+			Err.Printf("Cannot read spell sheet: %v", resp)
+			// log.Println("No data found.")
+		} else {
+			// var lastClass string
+			for i, row := range resp.Values {
+				// fmt.Printf("I: %d Config: %d\n", i, configuration.SpellSheetDataRowStart)
+				if i < configuration.Sheets.SpellSheetDataRowStart-1 {
+					continue
+				}
+				// fmt.Println(row)
+				if len(row) <= configuration.Sheets.SpellSheetSpellCol {
+					continue
+				}
+				spellName := fmt.Sprintf("%s", row[configuration.Sheets.SpellSheetSpellCol])
+				if "Spell: "+s.Name == spellName || strings.Replace(s.Name, "Ancient ", "Ancient: ", 1) == spellName { // Ancients are dumb
+					// fmt.Printf("h: %d data: %s\n", configuration.SpellSheetPlayerStartCol, row[configuration.SpellSheetPlayerStartCol])
+					for h := configuration.Sheets.SpellSheetPlayerStartCol; h < len(row); h++ {
+						rowString := fmt.Sprintf("%s", row[h])
+						if rowString == "FALSE" {
+							player := fmt.Sprintf("%s", resp.Values[configuration.Sheets.SpellSheetPlayerRow][h])
+							players = append(players, player)
+							Info.Printf("Player: %s needs %s\n", player, spellName)
+						}
+					}
+					break
+				}
+			}
+		}
+	}
+	if len(players) == 0 {
+		players = append(players, "no one")
+	}
+	return players
 }
