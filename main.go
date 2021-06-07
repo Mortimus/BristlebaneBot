@@ -606,6 +606,26 @@ func (b *BidItem) getWinners(count int) []Winner {
 	b.Bids = sortBids(b.Bids)
 	// TODO: Account for ties
 	winningbid := b.Bids[count].Amount + configuration.Bids.Increments
+	if len(b.Bids) > count && b.Bids[count-1].Amount == b.Bids[count].Amount && b.Bids[count].Bidder != "Rot" {
+		b.RollOff = true // for logging/replay purposes
+		winningbid = b.Bids[count].Amount
+		var rollers string
+		lowestBidder := count - 1
+
+		for i := count - 1; i < len(b.Bids); i++ {
+			if b.Bids[i].Bidder != "Rot" && b.Bids[i].Amount == winningbid {
+				if i == lowestBidder {
+					rollers = fmt.Sprintf("Roll off between %s", b.Bids[i].Bidder)
+				} else {
+					rollers = fmt.Sprintf("%s and %s", rollers, b.Bids[i].Bidder)
+					count++
+				}
+			}
+		}
+		rollers = fmt.Sprintf("%s required!", rollers)
+		Info.Printf("%s", rollers)
+		DiscordF(configuration.Discord.LootChannelID, "%s", rollers)
+	}
 	if b.Bids[0].Bidder != "Rot" && winningbid < configuration.Bids.MinimumBid {
 		winningbid = configuration.Bids.MinimumBid
 	}
@@ -617,24 +637,24 @@ func (b *BidItem) getWinners(count int) []Winner {
 			winningbid = configuration.Bids.MinimumBid
 		}
 	}
-	if winningbid > b.Bids[0].Amount { // account for ties
-		winningbid = b.Bids[0].Amount
-		if winningbid == b.Bids[count-1].Amount && b.Bids[count-1].Bidder != "Rot" {
-			// A ROLL OFF IS NEEDED
-			// Determine AMOUNT of ties
-			Info.Printf("Roll off required!: %#+v vs %#+v\n", b.Bids[count], b.Bids[count-1])
-			var ties int
-			for _, bidder := range b.Bids {
-				// TODO: account for secondmains bidding as mains
-				if bidder.Amount == winningbid && b.Bids[0].Player.Rank == bidder.Player.Rank { // is tied winner
-					ties++
-				}
-			}
-			count = ties     // show winners == amount of ties to imply roll off
-			b.RollOff = true // for logging/replay purposes
-			discord.ChannelMessageSend(configuration.Discord.LootChannelID, "Roll off required!")
-		}
-	}
+	// if winningbid > b.Bids[0].Amount { // account for ties
+	// 	winningbid = b.Bids[0].Amount
+	// 	if winningbid == b.Bids[count-1].Amount && b.Bids[count-1].Bidder != "Rot" {
+	// 		// A ROLL OFF IS NEEDED
+	// 		// Determine AMOUNT of ties
+	// 		Info.Printf("Roll off required!: %#+v vs %#+v\n", b.Bids[count], b.Bids[count-1])
+	// 		var ties int
+	// 		for _, bidder := range b.Bids {
+	// 			// TODO: account for secondmains bidding as mains
+	// 			if bidder.Amount == winningbid && b.Bids[0].Player.Rank == bidder.Player.Rank { // is tied winner
+	// 				ties++
+	// 			}
+	// 		}
+	// 		count = ties     // show winners == amount of ties to imply roll off
+	// 		b.RollOff = true // for logging/replay purposes
+	// 		discord.ChannelMessageSend(configuration.Discord.LootChannelID, "Roll off required!")
+	// 	}
+	// }
 	var winners []Winner
 	rot := &Player{
 		Name:  "Rot",
@@ -826,7 +846,7 @@ func uploadRaidDump(filename string) {
 	}
 }
 
-func uploadGuildDump(filename string) {
+func uploadGuildDump(filename string) { // TODO: this crashes bidbot if u can't upload?
 	var guild everquest.Guild
 	guild.LoadFromPath(Err, configuration.Everquest.BaseFolder+"/"+filename)
 	//Encode the data
@@ -868,7 +888,7 @@ func getArchiveList() []string { // TODO: get directory listing on archives
 	var files []string
 
 	root := "./archive"
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error { // This can never have an error TODO: fix this
 		name := strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
 		files = append(files, name)
 		return nil
