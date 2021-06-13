@@ -87,7 +87,7 @@ func init() {
 	if configuration.Log.Level < 3 {
 		Debug.SetOutput(ioutil.Discard)
 	}
-	itemDB.LoadFromFile(configuration.Everquest.ItemDB)
+	itemDB.LoadFromFile(configuration.Everquest.ItemDB, Err, Info)
 	spellDB.LoadFromFile(configuration.Everquest.SpellDB, Err)
 }
 
@@ -104,6 +104,7 @@ func main() {
 	// itemDB = loaditemDB(configuration.LucyItems)
 	// itemDB.LoadFromFile(configuration.Everquest.ItemDB)
 	// spellDB.LoadFromFile(configuration.Everquest.SpellDB)
+
 	archives = getArchiveList()
 	// loadRoster(configuration.GuildRosterPath)
 
@@ -332,8 +333,8 @@ func parseLogLine(log everquest.EqLog) {
 				// TODO: Lookup who needs the spell and add it to the loot message
 				cleanSpellName := strings.Replace(result[2], "Spell: ", "", 1)
 				cleanSpellName = strings.Replace(cleanSpellName, "Ancient: ", "Ancient ", 1)
-				spellID := spellDB.FindIDByName(cleanSpellName)
-				spell := spellDB.GetSpellByID(spellID)
+				spellID, _ := spellDB.FindIDByName(cleanSpellName)
+				spell, _ := spellDB.GetSpellByID(spellID)
 				var notNecro bool
 				for _, classCanUse := range spell.GetClasses() {
 					if classCanUse == "Necromancer" {
@@ -500,9 +501,24 @@ func (b *BidItem) addBid(user string, item string, amount int) {
 	} else {
 		b.Bids = append(b.Bids, bid)
 	}
+	itemID, _ := itemDB.FindIDByName(b.Item)
+	itemInstance, _ := itemDB.GetItemByID(itemID)
+	if !canUse(itemInstance, *roster[user]) {
+		DiscordF(configuration.Discord.InvestigationChannelID, "A class that is not %s bid on %s\n", itemInstance.GetClasses(), itemInstance.Name)
+	}
 
 	// b.Bids = append(b.Bids, bid)
 	Info.Printf("Adding Bid: Player: %s Main: %s MaxDKP: %d\n", bid.Player.Name, bid.Player.Main, bid.Player.DKP)
+}
+
+func canUse(item everquest.Item, player Player) bool {
+	classes := item.GetClasses()
+	for _, class := range classes {
+		if class == player.Class {
+			return true
+		}
+	}
+	return false
 }
 
 func roundDown(n int) int {
@@ -763,7 +779,11 @@ func isItem(name string) int {
 	// 	return itemDB[name]
 	// }
 	// Warn.Printf("Cannot find item: %s\n", name)
-	return itemDB.FindIDByName(name)
+	id, err := itemDB.FindIDByName(name)
+	if err != nil {
+		return -1
+	}
+	return id
 }
 
 func checkClosedBids() {
@@ -848,7 +868,7 @@ func uploadRaidDump(filename string) {
 
 func uploadGuildDump(filename string) { // TODO: this crashes bidbot if u can't upload?
 	var guild everquest.Guild
-	guild.LoadFromPath(Err, configuration.Everquest.BaseFolder+"/"+filename)
+	guild.LoadFromPath(configuration.Everquest.BaseFolder+"/"+filename, Err)
 	//Encode the data
 	postBody, _ := json.Marshal(guild)
 	responseBody := bytes.NewBuffer(postBody)
