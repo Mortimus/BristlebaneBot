@@ -503,7 +503,7 @@ func (b *BidItem) addBid(user string, item string, amount int) {
 	}
 	itemID, _ := itemDB.FindIDByName(b.Item)
 	itemInstance, _ := itemDB.GetItemByID(itemID)
-	if !canUse(itemInstance, *roster[user]) {
+	if !canUse(itemInstance, *roster[user]) && len(itemInstance.GetClasses()) > 0 {
 		DiscordF(configuration.Discord.InvestigationChannelID, "A class that is not %s bid on %s\n", itemInstance.GetClasses(), itemInstance.Name)
 	}
 
