@@ -856,7 +856,7 @@ func uploadRaidDump(filename string) {
 			// Start timer
 			raidStart = getTime().Round(1 * time.Hour)
 			nextDump = raidStart.Add(1 * time.Hour)
-			discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_raid_start", file)
+			discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_raid_start.txt", file)
 		} else {
 			if needsDump && getTime().Round(1*time.Hour) == nextDump {
 				raidDumps++
@@ -865,12 +865,12 @@ func uploadRaidDump(filename string) {
 				hourly++
 				hString := strconv.Itoa(hourly)
 				DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded an hourly raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
-				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_hour"+hString, file)
+				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_hour"+hString+".txt", file)
 			} else {
 				bosses++
 				hBosses := strconv.Itoa(bosses)
 				DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded a boss kill raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
-				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_boss"+hBosses, file)
+				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_boss"+hBosses+".txt", file)
 			}
 		}
 		// discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, filename, file)
