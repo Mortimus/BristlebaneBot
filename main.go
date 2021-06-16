@@ -845,7 +845,7 @@ var bosses int
 
 func uploadRaidDump(filename string) {
 	file, err := os.Open(configuration.Everquest.BaseFolder + "/" + filename)
-	stamp := time.Now().Format("20160102")
+	stamp := time.Now().Format("20060102")
 	if err != nil {
 		Err.Printf("Error finding Raid Dump: %s", err.Error())
 		discord.ChannelMessageSend(configuration.Discord.RaidDumpChannelID, "Error uploading Raid Dump: "+filename)
