@@ -69,6 +69,7 @@ type Discord struct {
 	SpellDumpChannelID       string   `comment:"Discord channel to send spell loot to"`
 	FlagChannelID            string   `comment:"Discord channel to send acquired flags to"`
 	ParseChannelID           string   `comment:"Discord channel to send parses to"`
+	UseDiscord               bool     `comment:"Should we use discord"`
 }
 
 type Everquest struct {
@@ -82,9 +83,11 @@ type Everquest struct {
 	BaseFolder        string   `comment:"Base folder where eqgame.exe is located, for determining logs and dumps"`
 	RegexLoot         string   `comment:"Regex to detect when an item has been looted"`
 	FlagGiver         []string `comment:"log text for a character getting a flag - Hail, a planar projection"`
+	DKPGiver          []string `comment:"mob names that we apply DKP for"`
 	ParseIdentifier   string   `comment:"string that a parse dump will contain"`
 	ParseChannel      string   `comment:"everquest channel to monitor for parses"`
 	SpellProvider     []string `comment:"item that provides a spell like Spectral Parchment"`
+	RegexSlay         string   `comment:"Regex to detect when a mob is slain"`
 }
 
 type Google struct {

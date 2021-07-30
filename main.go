@@ -30,11 +30,8 @@ import (
 var bidLock sync.Mutex
 var bids = map[string]*BidItem{}
 
-// var itemDB map[string]int
 var itemDB everquest.ItemDB
 var spellDB everquest.SpellDB
-
-// var itemLock sync.Mutex
 
 var investigation Investigation
 var currentTime time.Time // for simulating time
@@ -42,20 +39,19 @@ var archives []string     // stores all known archive files for recall
 var roster = map[string]*Player{}
 var rosterLock sync.Mutex
 
-var ChatLogs chan everquest.EqLog
+// var ChatLogs chan everquest.EqLog
 
-var currentZone string
+// var currentZone string
 var needsLooted []string
 
-var raidDumps int
-var raidStart time.Time
-var nextDump time.Time
-var needsDump bool
+// var raidDumps int
+
+// var raidStart time.Time
+
+// var nextDump time.Time
+// var needsDump bool
 
 var Debug, Warn, Err, Info *log.Logger
-
-// var needsReact map[string]*bool
-// var needsReactLock sync.Mutex
 
 const (
 	cInactive = iota
@@ -92,22 +88,10 @@ func init() {
 }
 
 func main() {
-	// Open Configuration and set log output
-	// configFile, err := os.OpenFile(configuration.LogPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	// if err != nil {
-	// 	log.Fatalf("error opening file: %v", err)
-	// }
-	// defer configFile.Close()
-	// log.SetOutput(configFile)
-	// l := LogInit("main-main.go")
-	// defer l.End()
-	// itemDB = loaditemDB(configuration.LucyItems)
-	// itemDB.LoadFromFile(configuration.Everquest.ItemDB)
-	// spellDB.LoadFromFile(configuration.Everquest.SpellDB)
-
 	archives = getArchiveList()
 	// loadRoster(configuration.GuildRosterPath)
 
+	// Setup google sheets
 	gtoken := &Gtoken{
 		Installed: Inst{
 			ClientID:                configuration.Google.ClientID,
@@ -149,17 +133,22 @@ func main() {
 	}
 	defer discord.Close()
 	discord.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
-	// updateDKP()
-	// dumpPlayers()
-	// fmt.Println(itemDB["Vyemm's Fang"])
-	loadRoster(configuration.Everquest.BaseFolder + "/" + getRecentRosterDump(configuration.Everquest.BaseFolder)) // needs to run AFTER discord is initialized
-	ChatLogs = make(chan everquest.EqLog)
-	Quit := make(chan bool, 1)
-	go everquest.BufferedLogRead(configuration.Everquest.LogPath, configuration.Main.ReadEntireLog, configuration.Main.LogPollRate, ChatLogs, Quit)
-	go parseLogs(Quit)
 
-	// // Register the messageCreate func as a callback for MessageCreate events.
-	// dg.AddHandler(messageCreate)
+	// Load the roaster for character lookups, and rank determination
+	loadRoster(configuration.Everquest.BaseFolder + "/" + getRecentRosterDump(configuration.Everquest.BaseFolder)) // needs to run AFTER discord is initialized
+	// Create channel for chat logs
+	ChatLogs := make(chan everquest.EqLog)
+	// Create channel to allow log reading to gracefully stop
+	Quit := make(chan bool, 1)
+
+	// Print all the plugins versions/etc
+	printPlugins(Info.Writer())
+	// Read logs on dedicated thread
+	go everquest.BufferedLogRead(configuration.Everquest.LogPath, configuration.Main.ReadEntireLog, configuration.Main.LogPollRate, ChatLogs, Quit)
+	// Parse logs on dedicated thread
+	go parseLogs(ChatLogs, Quit)
+
+	// Add handler so we can monitor reaction to messages
 	discord.AddHandler(reactionAdd)
 
 	// Open a websocket connection to Discord and begin listening.
@@ -176,14 +165,14 @@ func main() {
 	Info.Printf("Bot is now running")
 	DiscordF(configuration.Discord.InvestigationChannelID, "**BidBot online**\n> Secondmains bid as mains: %t\n> Secondmain max bid: %d (0 means infinite)", configuration.Bids.SecondMainsBidAsMains, configuration.Bids.SecondMainAsMainMaxBid)
 	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 	Quit <- true
 }
 
 func printHUD() {
 	fmt.Print("\033[H\033[2J") // clear the terminal should only work in windows
-	fmt.Printf("Time: %s\tNextDump: %s\n", currentTime.String(), nextDump.String())
+	fmt.Printf("Time: %s\n", currentTime.String())
 	fmt.Printf("Player: %s\tZone: %s\n", getPlayerName(configuration.Everquest.LogPath), currentZone)
 	fmt.Printf("Guild Members: %d\n", len(roster))
 	fmt.Printf("SecondMainsBidAsMains: %t\tSecondMainMaxBidAsMain: %d\n", configuration.Bids.SecondMainsBidAsMains, configuration.Bids.SecondMainAsMainMaxBid)
@@ -199,12 +188,33 @@ func printHUD() {
 	}
 }
 
-func parseLogs(quit <-chan bool) {
+func parseLogs(ChatLogs chan everquest.EqLog, quit <-chan bool) {
 	Info.Printf("Parsing logs")
 	printHUD()
 	for msgs := range ChatLogs {
+		currentTime = msgs.T
 		checkClosedBids()
-		parseLogLine(msgs)
+		parseLogLine(msgs) // Old, should be replaced with plugin system below
+		for _, handler := range Handlers {
+			switch handler.OutputChannel() {
+			case STDOUT:
+				handler.Handle(&msgs, os.Stdout)
+			case BIDOUT:
+				handler.Handle(&msgs, &BidWriter)
+			case INVESTIGATEOUT:
+				handler.Handle(&msgs, &InvestigateWriter)
+			case RAIDOUT:
+				handler.Handle(&msgs, &RaidWriter)
+			case SPELLOUT:
+				handler.Handle(&msgs, &SpellWriter)
+			case FLAGOUT:
+				handler.Handle(&msgs, &FlagWriter)
+			case PARSEOUT:
+				handler.Handle(&msgs, &ParseWriter)
+			default:
+				handler.Handle(&msgs, os.Stdout)
+			}
+		}
 		select {
 		case <-quit:
 			return
@@ -214,14 +224,10 @@ func parseLogs(quit <-chan bool) {
 }
 
 func parseLogLine(log everquest.EqLog) {
-	currentTime = log.T
-	// if log.Channel != "system" && log.Channel != "guild" && log.Channel != "group" && log.Channel != "raid" {
-	// 	// fmt.Printf("Channel: %s\n", l.channel)
+	// if !needsDump && getTime().Round(5*time.Minute) == nextDump.Round(5*time.Minute) {
+	// 	DiscordF(configuration.Discord.InvestigationChannelID, "Time for another hourly raid dump!")
+	// 	needsDump = true
 	// }
-	if !needsDump && getTime().Round(5*time.Minute) == nextDump.Round(5*time.Minute) {
-		DiscordF(configuration.Discord.InvestigationChannelID, "Time for another hourly raid dump!")
-		needsDump = true
-	}
 	if log.Channel == "guild" {
 		investigation.addLog(log)
 		// Close Bid
@@ -264,21 +270,20 @@ func parseLogLine(log everquest.EqLog) {
 			}
 			return
 		}
+	}
+	// if log.Channel == "say" { // Guzz says, 'Hail, a spell jammer'
+	// 	if checkFlagGivers(log.Msg) {
+	// 		DiscordF(configuration.Discord.FlagChannelID, "%s got the flag from %s\n", log.Source, currentZone)
+	// 	}
+	// }
 
-	}
-	if log.Channel == "say" { // Guzz says, 'Hail, a spell jammer'
-		if checkFlagGivers(log.Msg) {
-			DiscordF(configuration.Discord.FlagChannelID, "%s got the flag from %s\n", log.Source, currentZone)
-		}
-	}
-
-	if strings.Contains(strings.ToLower(log.Channel), strings.ToLower(configuration.Everquest.ParseChannel)) {
-		if strings.Contains(log.Msg, configuration.Everquest.ParseIdentifier) {
-			i := strings.Index(log.Msg, "'")
-			out := strings.ReplaceAll(log.Msg[i:], "'", "")
-			DiscordF(configuration.Discord.ParseChannelID, "> %s provided a parse\n```%s```", log.Source, out)
-		}
-	}
+	// if strings.Contains(strings.ToLower(log.Channel), strings.ToLower(configuration.Everquest.ParseChannel)) {
+	// 	if strings.Contains(log.Msg, configuration.Everquest.ParseIdentifier) {
+	// 		i := strings.Index(log.Msg, "'")
+	// 		out := strings.ReplaceAll(log.Msg[i:], "'", "")
+	// 		DiscordF(configuration.Discord.ParseChannelID, "> %s provided a parse\n```%s```", log.Source, out)
+	// 	}
+	// }
 	if log.Channel == "tell" {
 		investigation.addLog(log)
 		// Add Bid
@@ -307,24 +312,24 @@ func parseLogLine(log everquest.EqLog) {
 		}
 	}
 	if log.Channel == "system" {
-		if strings.Contains(log.Msg, "Outputfile") {
-			outputName := log.Msg[21:] // Filename Outputfile sent data to
-			if strings.Contains(log.Msg, "RaidRoster") {
-				Info.Printf("Raid Dump exported, uploading")
-				// upload to discord
-				uploadRaidDump(outputName)
-			}
-			if strings.Contains(log.Msg, configuration.Everquest.GuildName) {
-				Info.Printf("Guild Dump exported, uploading")
-				// upload to discord
-				uploadGuildDump(outputName)
-			}
-		}
-		if strings.Contains(log.Msg, "You have entered ") && !strings.Contains(log.Msg, "function.") { // You have entered Vex Thal. NOT You have entered an area where levitation effects do not function.
-			currentZone = log.Msg[17 : len(log.Msg)-1]
-			printHUD()
-			Info.Printf("Changing zone to %s\n", currentZone)
-		}
+		// if strings.Contains(log.Msg, "Outputfile") {
+		// 	outputName := log.Msg[21:] // Filename Outputfile sent data to
+		// 	// if strings.Contains(log.Msg, "RaidRoster") {
+		// 	// 	Info.Printf("Raid Dump exported, uploading")
+		// 	// 	// upload to discord
+		// 	// 	uploadRaidDump(outputName)
+		// 	// }
+		// 	if strings.Contains(log.Msg, configuration.Everquest.GuildName) {
+		// 		Info.Printf("Guild Dump exported, uploading")
+		// 		// upload to discord
+		// 		uploadGuildDump(outputName)
+		// 	}
+		// }
+		// if strings.Contains(log.Msg, "You have entered ") && !strings.Contains(log.Msg, "function.") { // You have entered Vex Thal. NOT You have entered an area where levitation effects do not function.
+		// 	currentZone = log.Msg[17 : len(log.Msg)-1]
+		// 	printHUD()
+		// 	Info.Printf("Changing zone to %s\n", currentZone)
+		// }
 		// Item Looted
 		r, _ := regexp.Compile(configuration.Everquest.RegexLoot)
 		result := r.FindStringSubmatch(log.Msg)
@@ -373,7 +378,7 @@ func parseLogLine(log everquest.EqLog) {
 	}
 }
 
-func isSpellProvider(item string) bool {
+func isSpellProvider(item string) bool { // TODO: Add spell replacement options
 	for _, sitem := range configuration.Everquest.SpellProvider {
 		if item == sitem {
 			return true
@@ -728,7 +733,7 @@ func sortBids(bids []Bid) []Bid {
 			var fixedSMains []Bid
 			for _, sMain := range secondmains {
 				if sMain.Amount > configuration.Bids.SecondMainAsMainMaxBid { // They bid too much, so lower it to the max allowed
-					Info.Printf("Secondmain %s bid more than the max allowed of %s, setting to max\n", sMain.Player, configuration.Bids.SecondMainAsMainMaxBid)
+					Info.Printf("Secondmain %s bid more than the max allowed of %d, setting to max\n", sMain.Player.Name, configuration.Bids.SecondMainAsMainMaxBid)
 					sMain.Amount = configuration.Bids.SecondMainAsMainMaxBid
 				}
 				fixedSMains = append(fixedSMains, sMain)
@@ -840,42 +845,42 @@ func uploadArchive(id string) {
 	}
 }
 
-var hourly int
-var bosses int
+// var hourly int
+// var bosses int
 
-func uploadRaidDump(filename string) {
-	file, err := os.Open(configuration.Everquest.BaseFolder + "/" + filename)
-	stamp := time.Now().Format("20060102")
-	if err != nil {
-		Err.Printf("Error finding Raid Dump: %s", err.Error())
-		discord.ChannelMessageSend(configuration.Discord.RaidDumpChannelID, "Error uploading Raid Dump: "+filename)
-	} else {
-		if raidDumps == 0 {
-			DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded an on-time raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
-			raidDumps++
-			// Start timer
-			raidStart = getTime().Round(1 * time.Hour)
-			nextDump = raidStart.Add(1 * time.Hour)
-			discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_raid_start.txt", file)
-		} else {
-			if needsDump && getTime().Round(1*time.Hour) == nextDump {
-				raidDumps++
-				nextDump = nextDump.Add(1 * time.Hour)
-				needsDump = false
-				hourly++
-				hString := strconv.Itoa(hourly)
-				DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded an hourly raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
-				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_hour"+hString+".txt", file)
-			} else {
-				bosses++
-				hBosses := strconv.Itoa(bosses)
-				DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded a boss kill raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
-				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_boss"+hBosses+".txt", file)
-			}
-		}
-		// discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, filename, file)
-	}
-}
+// func uploadRaidDump(filename string) {
+// 	file, err := os.Open(configuration.Everquest.BaseFolder + "/" + filename)
+// 	stamp := time.Now().Format("20060102")
+// 	if err != nil {
+// 		Err.Printf("Error finding Raid Dump: %s", err.Error())
+// 		discord.ChannelMessageSend(configuration.Discord.RaidDumpChannelID, "Error uploading Raid Dump: "+filename)
+// 	} else {
+// 		if raidDumps == 0 {
+// 			DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded an on-time raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
+// 			raidDumps++
+// 			// Start timer
+// 			raidStart = getTime().Round(1 * time.Hour)
+// 			nextDump = raidStart.Add(1 * time.Hour)
+// 			discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_raid_start.txt", file)
+// 		} else {
+// 			if needsDump && getTime().Round(1*time.Hour) == nextDump {
+// 				raidDumps++
+// 				nextDump = nextDump.Add(1 * time.Hour)
+// 				needsDump = false
+// 				hourly++
+// 				hString := strconv.Itoa(hourly)
+// 				DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded an hourly raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
+// 				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_hour"+hString+".txt", file)
+// 			} else {
+// 				bosses++
+// 				hBosses := strconv.Itoa(bosses)
+// 				DiscordF(configuration.Discord.RaidDumpChannelID, "%s uploaded a boss kill raid dump at %s for %s", getPlayerName(configuration.Everquest.LogPath), getTime().String(), currentZone)
+// 				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, stamp+"_boss"+hBosses+".txt", file)
+// 			}
+// 		}
+// 		// discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, filename, file)
+// 	}
+// }
 
 func uploadGuildDump(filename string) { // TODO: this crashes bidbot if u can't upload?
 	var guild everquest.Guild
@@ -1136,9 +1141,6 @@ func getRecentRosterDump(path string) string {
 	if err != nil {
 		panic(err)
 	}
-	// for _, file := range files {
-	// 	fmt.Println(file)
-	// }
 	if !isDumpOutOfDate(files[len(files)-1]) {
 		DiscordF(configuration.Discord.InvestigationChannelID, "**Guild dump %s is out of date, this needs updated with ALL members (including offline and alts) before bidbot is ran**", files[len(files)-1])
 	}
