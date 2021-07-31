@@ -23,7 +23,7 @@ func init() {
 
 // Handle for LinkdeadPlugin sends a message if it detects a player has gone linkdead.
 func (p *ZonePlugin) Handle(msg *everquest.EqLog, out io.Writer) {
-	if msg.Channel == "system" && strings.Contains(msg.Msg, "You have entered ") && !strings.Contains(msg.Msg, "function.") { // You have entered Vex Thal. NOT You have entered an area where levitation effects do not function.
+	if msg.Channel == "system" && strings.Contains(msg.Msg, "You have entered ") && !strings.Contains(msg.Msg, "function.") && !strings.Contains(msg.Msg, "Bind Affinity") { // You have entered Vex Thal. NOT You have entered an area where levitation effects do not function.
 		currentZone = msg.Msg[17 : len(msg.Msg)-1]
 		fmt.Fprintf(out, "Changing zone to %s\n", currentZone)
 
