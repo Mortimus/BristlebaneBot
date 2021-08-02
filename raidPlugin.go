@@ -67,6 +67,7 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			formattedBoss = strings.Replace(formattedBoss, "'", "", -1) // Remove '
 			fileName = fmt.Sprintf("%s_%s_%d.txt", stamp, formattedBoss, p.Bosses)
 			p.LastBoss = "Unknown"
+			p.Bosses++
 		}
 		if p.NeedsDump && p.Hours == 0 {
 			fileName = stamp + "_raid_start.txt"
