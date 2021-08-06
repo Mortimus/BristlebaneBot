@@ -41,3 +41,20 @@ func TestZoneLevitate(t *testing.T) {
 		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
 	}
 }
+
+func TestZoneBind(t *testing.T) {
+	ldplug := new(ZonePlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "system"
+	msg.Msg = "You have entered an area where Bind Affinity is allowed."
+	msg.Source = "Mortimus"
+	msg.T = time.Now()
+	currentZone = ""
+	var b bytes.Buffer
+	ldplug.Handle(msg, &b)
+	got := b.String()
+	want := ""
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
+	}
+}

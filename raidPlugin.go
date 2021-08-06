@@ -59,7 +59,7 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 		// Upload the Raid Dump
 		outputName := msg.Msg[21:] // Filename Outputfile sent data to
 		file, err := os.Open(configuration.Everquest.BaseFolder + "/" + outputName)
-		stamp := time.Now().Format("20060102")
+		stamp := msg.T.Format("20060102")
 		var fileName string
 		if !p.NeedsDump { // Boss Kill
 			formattedBoss := strings.Replace(p.LastBoss, " ", "_", -1)  // Remove Spaces
@@ -74,14 +74,14 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			p.NeedsDump = false
 			p.Hours++
 			p.Start = getTime().Round(1 * time.Hour)
-			p.NextDump = time.Now().Add(1 * time.Hour)
+			p.NextDump = msg.T.Add(1 * time.Hour)
 			p.Started = true
 		}
 		if p.NeedsDump && p.Hours > 0 {
 			fileName = fmt.Sprintf("%s_hour_%d.txt", stamp, p.Hours)
 			p.NeedsDump = false
 			p.Hours++
-			p.NextDump = time.Now().Add(1 * time.Hour)
+			p.NextDump = msg.T.Add(1 * time.Hour)
 		}
 		if p.Output != TESTOUT && err != nil {
 			fmt.Fprintf(out, "Error finding Raid Dump: %s\n", outputName)
