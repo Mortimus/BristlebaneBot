@@ -311,80 +311,71 @@ func parseLogLine(log everquest.EqLog) {
 			return
 		}
 	}
-	if log.Channel == "system" {
-		// if strings.Contains(log.Msg, "Outputfile") {
-		// 	outputName := log.Msg[21:] // Filename Outputfile sent data to
-		// 	// if strings.Contains(log.Msg, "RaidRoster") {
-		// 	// 	Info.Printf("Raid Dump exported, uploading")
-		// 	// 	// upload to discord
-		// 	// 	uploadRaidDump(outputName)
-		// 	// }
-		// 	if strings.Contains(log.Msg, configuration.Everquest.GuildName) {
-		// 		Info.Printf("Guild Dump exported, uploading")
-		// 		// upload to discord
-		// 		uploadGuildDump(outputName)
-		// 	}
-		// }
-		// if strings.Contains(log.Msg, "You have entered ") && !strings.Contains(log.Msg, "function.") { // You have entered Vex Thal. NOT You have entered an area where levitation effects do not function.
-		// 	currentZone = log.Msg[17 : len(log.Msg)-1]
-		// 	printHUD()
-		// 	Info.Printf("Changing zone to %s\n", currentZone)
-		// }
-		// Item Looted
-		r, _ := regexp.Compile(configuration.Everquest.RegexLoot)
-		result := r.FindStringSubmatch(log.Msg)
-		if len(result) > 0 {
-			if strings.Contains(result[2], "Spell: ") || strings.Contains(result[2], "Ancient: ") { // TODO: Include "Ancient: "
-				// TODO: Lookup who needs the spell and add it to the loot message
-				cleanSpellName := strings.Replace(result[2], "Spell: ", "", 1)
-				cleanSpellName = strings.Replace(cleanSpellName, "Ancient: ", "Ancient ", 1)
-				spellID, _ := spellDB.FindIDByName(cleanSpellName)
-				spell, _ := spellDB.GetSpellByID(spellID)
-				var notNecro bool
-				for _, classCanUse := range spell.GetClasses() {
-					if classCanUse == "Necromancer" {
-						var canUseString string
-						for i, player := range findWhoNeedsSpell(spell) {
-							if i != 0 {
-								canUseString += ", "
-							}
-							canUseString += player
-						}
-						DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s needed by %+s", result[1], spell.Name, result[3], canUseString)
-					} else {
-						notNecro = true
-					}
-				}
-				if notNecro {
-					DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
-				}
-				if len(spell.GetClasses()) == 0 {
-					// TODO: do a broader search for a spell with said name that has classes
-					DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
-				}
-			}
-			if isSpellProvider(result[2]) {
-				// TODO: Lookup what class will get this and add it to the loot message
-				DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s", result[1], result[2], result[3])
-			}
-			for _, item := range needsLooted { // Notify that someone looted a bid upon item
-				if strings.ToLower(result[2]) == item {
-					DiscordF(configuration.Discord.LootChannelID, "%s looted %s from %s", result[1], result[2], result[3])
-					removeLootFromLooted(item)
-					break // We only want to remove 1 item per loot (multi bid items we want to see all winners loot them)
-				}
-			}
-		}
-	}
-}
-
-func isSpellProvider(item string) bool { // TODO: Add spell replacement options
-	for _, sitem := range configuration.Everquest.SpellProvider {
-		if item == sitem {
-			return true
-		}
-	}
-	return false
+	// if log.Channel == "system" {
+	// 	// if strings.Contains(log.Msg, "Outputfile") {
+	// 	// 	outputName := log.Msg[21:] // Filename Outputfile sent data to
+	// 	// 	// if strings.Contains(log.Msg, "RaidRoster") {
+	// 	// 	// 	Info.Printf("Raid Dump exported, uploading")
+	// 	// 	// 	// upload to discord
+	// 	// 	// 	uploadRaidDump(outputName)
+	// 	// 	// }
+	// 	// 	if strings.Contains(log.Msg, configuration.Everquest.GuildName) {
+	// 	// 		Info.Printf("Guild Dump exported, uploading")
+	// 	// 		// upload to discord
+	// 	// 		uploadGuildDump(outputName)
+	// 	// 	}
+	// 	// }
+	// 	// if strings.Contains(log.Msg, "You have entered ") && !strings.Contains(log.Msg, "function.") { // You have entered Vex Thal. NOT You have entered an area where levitation effects do not function.
+	// 	// 	currentZone = log.Msg[17 : len(log.Msg)-1]
+	// 	// 	printHUD()
+	// 	// 	Info.Printf("Changing zone to %s\n", currentZone)
+	// 	// }
+	// 	// Item Looted
+	// 	r, _ := regexp.Compile(configuration.Everquest.RegexLoot)
+	// 	result := r.FindStringSubmatch(log.Msg)
+	// 	if len(result) > 0 {
+	// 		if strings.Contains(result[2], "Spell: ") || strings.Contains(result[2], "Ancient: ") { // TODO: Include "Ancient: "
+	// 			// TODO: Lookup who needs the spell and add it to the loot message
+	// 			cleanSpellName := strings.Replace(result[2], "Spell: ", "", 1)
+	// 			cleanSpellName = strings.Replace(cleanSpellName, "Ancient: ", "Ancient ", 1)
+	// 			spellID, _ := spellDB.FindIDByName(cleanSpellName)
+	// 			spell, _ := spellDB.GetSpellByID(spellID)
+	// 			var notNecro bool
+	// 			for _, classCanUse := range spell.GetClasses() {
+	// 				if classCanUse == "Necromancer" {
+	// 					var canUseString string
+	// 					for i, player := range findWhoNeedsSpell(spell) {
+	// 						if i != 0 {
+	// 							canUseString += ", "
+	// 						}
+	// 						canUseString += player
+	// 					}
+	// 					DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s needed by %+s", result[1], spell.Name, result[3], canUseString)
+	// 				} else {
+	// 					notNecro = true
+	// 				}
+	// 			}
+	// 			if notNecro {
+	// 				DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
+	// 			}
+	// 			if len(spell.GetClasses()) == 0 {
+	// 				// TODO: do a broader search for a spell with said name that has classes
+	// 				DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s usable by %s", result[1], spell.Name, result[3], spell.Classes)
+	// 			}
+	// 		}
+	// 		if isSpellProvider(result[2]) {
+	// 			// TODO: Lookup what class will get this and add it to the loot message
+	// 			DiscordF(configuration.Discord.SpellDumpChannelID, "%s looted %s from %s", result[1], result[2], result[3])
+	// 		}
+	// 		for _, item := range needsLooted { // Notify that someone looted a bid upon item
+	// 			if strings.ToLower(result[2]) == item {
+	// 				DiscordF(configuration.Discord.LootChannelID, "%s looted %s from %s", result[1], result[2], result[3])
+	// 				removeLootFromLooted(item)
+	// 				break // We only want to remove 1 item per loot (multi bid items we want to see all winners loot them)
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 func removeFromSlice(slice []Bid, s int) []Bid {
@@ -401,14 +392,14 @@ func removeLootFromLooted(item string) {
 	needsLooted = append(needsLooted[:itemPos], needsLooted[itemPos+1:]...)
 }
 
-func checkFlagGivers(msg string) bool {
-	for _, flaggiver := range configuration.Everquest.FlagGiver {
-		if strings.Contains(msg, flaggiver) {
-			return true
-		}
-	}
-	return false
-}
+// func checkFlagGivers(msg string) bool {
+// 	for _, flaggiver := range configuration.Everquest.FlagGiver {
+// 		if strings.Contains(msg, flaggiver) {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func openBid(item string, count int, id int) {
 	if _, ok := bids[item]; ok { // if the bid already exist, remove old
