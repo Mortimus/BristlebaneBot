@@ -212,8 +212,11 @@ func getItemDesc(item everquest.Item) string {
 		desc += fmt.Sprintf("SV POISON: +%d ", item.Pr)
 	}
 	// Advanced Stats
-	if item.Attack > 0 || item.Regen > 0 || item.Manaregen > 0 || item.Enduranceregen > 0 {
+	if item.Attack > 0 || item.Regen > 0 || item.Manaregen > 0 || item.Enduranceregen > 0 || item.Haste > 0 {
 		desc += "\n"
+	}
+	if item.Haste > 0 {
+		desc += fmt.Sprintf("Haste: +%d%% ", item.Haste)
 	}
 	if item.Attack > 0 {
 		desc += fmt.Sprintf("Attack: +%d ", item.Attack)

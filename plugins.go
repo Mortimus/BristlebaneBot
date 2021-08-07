@@ -37,8 +37,21 @@ type DiscordWriter struct {
 }
 
 func (dw *DiscordWriter) Write(p []byte) (n int, err error) {
-	_, err = discord.ChannelMessageSend(dw.Channel, string(p[:]))
+	const maxMessageLength = 1000
 	n = len(p)
+	for len(p) > 0 {
+		// n = len(p)
+		if len(p) > maxMessageLength {
+			discord.ChannelMessageSend(dw.Channel, string(p[:maxMessageLength]))
+			p = p[maxMessageLength:]
+		} else {
+			_, err = discord.ChannelMessageSend(dw.Channel, string(p[:]))
+			break
+		}
+	}
+
+	// _, err = discord.ChannelMessageSend(dw.Channel, string(p[:]))
+
 	return n, err
 }
 
