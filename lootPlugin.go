@@ -32,6 +32,9 @@ func (p *LootPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 		match := p.LootMatch.FindStringSubmatch(msg.Msg)
 		if len(match) > 0 {
 			player := match[1]
+			if player == "You" {
+				player = getPlayerName(configuration.Everquest.LogPath)
+			}
 			loot := match[2]
 			corpse := match[3]
 			// fmt.Printf("%#+v\n", loot)

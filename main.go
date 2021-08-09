@@ -1117,7 +1117,7 @@ func getPlayerName(logFile string) string {
 	if len(split) < 3 {
 		return "Unknown Player"
 	}
-	return split[2] + "." + split[1]
+	return split[1]
 }
 
 func getRecentRosterDump(path string) string {

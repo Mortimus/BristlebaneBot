@@ -92,3 +92,22 @@ func TestItemDesc(t *testing.T) {
 		t.Errorf("plug.Handle(msg, &b) = %q, want %q", got, want)
 	}
 }
+
+func TestAwardedSelfLoot(t *testing.T) {
+	plug := new(LootPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "system"
+	msg.Msg = "--You have looted a Cloth Cap from a glimmer drake's corpse.--"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.LootMatch, _ = regexp.Compile(`--(\w+) ha\w{1,2} looted a[n]? (.+) from (.+)['s corpse]?[ ]?\.--`)
+	roster["Mortimus"] = &Player{Name: "Mortimus", Class: "Necromancer"}
+	needsLooted = []string{"Cloth Cap"}
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	got := b.String()
+	want := "> Mortimus (Necromancer) looted Cloth Cap from a glimmer drake's corpse\n```Cloth Cap\nMAGIC LORE NO TRADE \nSlot: NONE \n\nEffect: Veeshan's Swarm \nWT: 0.5 Size: SMALL\nClass: ALL \nRace: ALL ```\n"
+	if got != want {
+		t.Errorf("plug.Handle(msg, &b) = %q, want %q", got, want)
+	}
+}
