@@ -111,3 +111,22 @@ func TestAwardedSelfLoot(t *testing.T) {
 		t.Errorf("plug.Handle(msg, &b) = %q, want %q", got, want)
 	}
 }
+
+func TestInferredLoot(t *testing.T) {
+	plug := new(LootPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "system"
+	msg.Msg = "--Mortimus has looted a Timeless Silk Robe Pattern from a Quarm's corpse.--"
+	msg.Source = "Mortimus"
+	msg.T = time.Now()
+	plug.LootMatch, _ = regexp.Compile(`--(\w+) has looted a[n]? (.+) from (.+)['s corpse]?[ ]?\.--`)
+	roster["Mortimus"] = &Player{Name: "Mortimus", Class: "Necromancer"}
+	needsLooted = []string{"Timeless Silk Robe Pattern"}
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	got := b.String()
+	want := "> Mortimus (Necromancer) looted Miragul's Shroud of Risen Souls from a Quarm's corpse\n```Miragul's Shroud of Risen Souls\nMAGIC LORE NO TRADE \nSlot: CHEST  \nAC: 35\nSkill Mod: Specialize Alteration +8% (21 Max)\nDEX: +25 STA: +30 CHA: +15 WIS: +0+5 INT: +30+5 AGI: +25 HP: +185 MANA: +200 \nSV FIRE: +20 SV DISEASE: +20 SV COLD: +20 SV MAGIC: +20 SV POISON: +20 \nRequired level of 65 \nFocus: Vengeance of Eternity \nWT: 1.0 Size: LARGE\nClass: NEC  \nRace: ALL \nSlot 1, Type 8 (General: Raid)\nSlot 2, Type 21 (Special Ornamentation)```\n"
+	if got != want {
+		t.Errorf("plug.Handle(msg, &b) = %q, want %q", got, want)
+	}
+}

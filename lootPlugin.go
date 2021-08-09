@@ -22,6 +22,7 @@ func init() {
 	plug.Version = "1.0.0"
 	plug.Output = SPELLOUT
 	Handlers = append(Handlers, plug)
+	seedInferredItems()
 
 	plug.LootMatch, _ = regexp.Compile(configuration.Everquest.RegexLoot)
 }
@@ -44,9 +45,10 @@ func (p *LootPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			}
 			if loot != "" && strings.Contains(loot, "Spell: ") || strings.Contains(loot, "Ancient: ") || isSpellProvider(loot) || isAwardedLoot(loot) {
 				// Lookup spell name, and what players need it
+				loot = inferLoot(class, loot) // Check if item results in a class specific item, and replace it here.
 				id, _ := itemDB.FindIDByName(loot)
 				item, _ := itemDB.GetItemByID(id)
-				fmt.Fprintf(out, "> %s (%s) looted %s from %s\n```%s```\n", player, class, loot, corpse, getItemDesc(item)) // TODO: Make this a sexy print with item stats
+				fmt.Fprintf(out, "> %s (%s) looted %s from %s\n```%s```\n", player, class, item.Name, corpse, getItemDesc(item)) // TODO: Make this a sexy print with item stats
 			}
 		}
 	}
@@ -990,4 +992,117 @@ func augTypeToString(augType int) string {
 		return "Luck"
 	}
 	return ""
+}
+
+func inferLoot(class string, loot string) string {
+	for item, infer := range inferredItems {
+		if strings.EqualFold(item, loot) {
+			for _, inferClass := range infer {
+				if strings.EqualFold(class, inferClass.Class) {
+					return inferClass.Item
+				}
+			}
+			return loot // Couldn't find usable class, don't waste cycles
+		}
+	}
+	return loot
+}
+
+type InferredItem struct {
+	Class string
+	Item  string
+}
+
+var inferredItems map[string][]InferredItem
+
+func seedInferredItems() {
+	inferredItems = make(map[string][]InferredItem)
+	inferredItems["Timeless Breastplate Mold"] = []InferredItem{
+		{"Bard", "Rizlona's Fiery Chestplate"},
+		{"Cleric", "Ultor's Chestguard of Faith"},
+		{"Paladin", "Trydan's Chestplate of Nobility"},
+		{"Shadow Knight", "Grimror's Guard of the Plagues"},
+		{"Warrior", "Raex's Chestplate of Destruction"},
+	}
+	inferredItems["Timeless Leather Tunic Pattern"] = []InferredItem{
+		{"Beastlord", "Dumul's Chestwraps of the Brute"},
+		{"Druid", "Kerasha's Sylvan Tunic"},
+		{"Monk", "Ton Po's Chestwraps of Composure"},
+	}
+	inferredItems["Timeless Chain Tunic Pattern"] = []InferredItem{
+		{"Berserker", "Galladan's Stormwrath Tunic"},
+		{"Ranger", "Askr's Thunderous Chainmail"},
+		{"Rogue", "Bidilis' Hauberk of the Elusive"},
+		{"Shaman", "Rosrak's Hauberk of the Primal"},
+	}
+	inferredItems["Timeless Silk Robe Pattern"] = []InferredItem{
+		{"Enchanter", "Romar's Robe of Visions"},
+		{"Magician", "Magi`Kot's Robe of Convergence"},
+		{"Necromancer", "Miragul's Shroud of Risen Souls"},
+		{"Wizard", "Maelin's Robe of Lore"},
+	}
+	inferredItems["Taelosian Geomancy Stone Jelki"] = []InferredItem{
+		{"Bard", "Song: Echo of the Trusik"},
+		{"Beastlord", "Spell: Trushar's Mending"},
+		{"Berserker", "Tome of Battle Cry of the Mastruq"},
+		{"Cleric", "Spell: Holy Elixir"},
+		{"Druid", "Spell: Sylvan Fire"},
+		{"Enchanter", "Spell: Bliss of the Nihil"},
+		{"Magician", "Spell: Elemental Siphon"},
+		{"Monk", "Tome of Phantom Shadow"},
+		{"Necromancer", "Spell: Night Stalker"},
+		{"Paladin", "Spell: Wave of Trushar"},
+		{"Ranger", "Spell: Sylvan Burn"},
+		{"Rogue", "Tome of Kyv Strike"},
+		{"Shadow Knight", "Spell: Black Shroud"},
+		{"Shaman", "Spell: Breath of Trushar"},
+		{"Warrior", "Tome of Bellow of the Mastruq"},
+		{"Wizard", "Spell: White Fire"},
+	}
+	inferredItems["Taelosian Geomancy Stone Eril"] = []InferredItem{
+		{"Bard", "Song: Dark Echo"},
+		{"Beastlord", "Spell: Trushar's Frost"},
+		{"Cleric", "Spell: Order"},
+		{"Druid", "Spell: Sylvan Embers"},
+		{"Enchanter", "Spell: Madness of Ikkibi"},
+		{"Magician", "Spell: Monster Summoning IV"},
+		{"Necromancer", "Spell: Night's Beckon"},
+		{"Paladin", "Spell: Holy Order"},
+		{"Ranger", "Spell: Sylvan Call"},
+		{"Shadow Knight", "Spell: Miasmic Spear"},
+		{"Shaman", "Spell: Daluda's Mending"},
+		{"Wizard", "Spell: Telaka"},
+	}
+	inferredItems["Taelosian Geomancy Stone Yiktu"] = []InferredItem{
+		{"Bard", "Song: War March of the Mastruq"},
+		{"Beastlord", "Spell: Turepta Blood"},
+		{"Cleric", "Spell: Holy Light"},
+		{"Druid", "Spell: Sylvan Infusion"},
+		{"Enchanter", "Spell: Dreary Deeds"},
+		{"Magician", "Spell: Rock of Taelosia"},
+		{"Necromancer", "Spell: Night Fire"},
+		{"Paladin", "Spell: Light of Order"},
+		{"Ranger", "Spell: Sylvan Light"},
+		{"Shadow Knight", "Spell: Mental Horror"},
+		{"Shaman", "Spell: Balance of the Nihil"},
+		{"Wizard", "Spell: Black Ice"},
+	}
+	inferredItems["Chaos Runes"] = []InferredItem{
+		{"Bard", "Spell: Ancient: Chaos Chant"},
+		{"Beastlord", "Spell: Ancient: Frozen Chaos"},
+		{"Berserker", "Tome of Ancient: Cry of Chaos"},
+		{"Cleric", "Spell: Ancient: Chaos Censure"},
+		{"Druid", "Spell: Ancient: Chaos Frost"},
+		{"Enchanter", "Spell: Ancient: Chaos Madness"},
+		{"Magician", "Spell: Ancient: Chaos Vortex"},
+		{"Monk", "Tome of Ancient: Phantom Chaos"},
+		{"Necromancer", "Spell: Ancient: Seduction of Chaos"},
+		{"Paladin", "Spell: Ancient: Force of Chaos"},
+		{"Ranger", "Spell: Ancient: Burning Chaos"},
+		{"Rogue", "Tome of Ancient: Chaos Strike"},
+		{"Shadow Knight", "Spell: Ancient: Bite of Chaos"},
+		{"Shaman", "Spell: Ancient: Chaotic Pain"},
+		{"Warrior", "Tome of Ancient: Chaos Cry"},
+		{"Wizard", "Spell: Ancient: Strike of Chaos"},
+	}
 }

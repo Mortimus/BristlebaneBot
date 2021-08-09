@@ -235,6 +235,9 @@ func parseLogLine(log everquest.EqLog) {
 		r, _ := regexp.Compile(configuration.Bids.RegexClosedBid) // TODO: Force this to match only the bidmaster
 		result := r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
+			if log.Source != "You" {
+				return
+			}
 			itemName := strings.TrimSpace(result[1])
 			itemName = strings.ToLower(itemName)
 			itemID := isItem(itemName)
@@ -252,6 +255,9 @@ func parseLogLine(log everquest.EqLog) {
 		r, _ = regexp.Compile(configuration.Bids.RegexOpenBid) // TODO: Make it NOT match if "CLOSED" or "wins" is in this, otherwise we will open aditional bids - also if we have a dedicated box, we can match that
 		result = r.FindStringSubmatch(log.Msg)
 		if len(result) > 0 {
+			if log.Source != "You" {
+				return
+			}
 			itemName := strings.TrimSpace(result[1])
 			itemName = strings.ToLower(itemName)
 			itemID := isItem(itemName)
@@ -471,7 +477,9 @@ func (b *BidItem) startBid() {
 	b.Start = getTime()
 	b.End = b.Start.Add(time.Duration(time.Duration(configuration.Bids.OpenBidTimer) * time.Minute))
 	// time.NewTimer(3 * time.Minute)
-	_, err := discord.ChannelMessageSend(configuration.Discord.LootChannelID, fmt.Sprintf("Bids open on %s x%d for %d minutes", b.Item, b.Count, configuration.Bids.OpenBidTimer))
+	id, _ := itemDB.FindIDByName(b.Item)
+	item, _ := itemDB.GetItemByID(id)
+	_, err := discord.ChannelMessageSend(configuration.Discord.LootChannelID, fmt.Sprintf("> Bids open on **%s** x%d for %d minutes\n```%s```\n", item.Name, b.Count, configuration.Bids.OpenBidTimer, getItemDesc(item)))
 	if err != nil {
 		Err.Printf("Failed to open bid: %s", err.Error())
 	}
