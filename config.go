@@ -88,6 +88,7 @@ type Everquest struct {
 	ParseChannel      string   `comment:"everquest channel to monitor for parses"`
 	SpellProvider     []string `comment:"item that provides a spell like Spectral Parchment"`
 	RegexSlay         string   `comment:"Regex to detect when a mob is slain"`
+	RegexRoll         string   `comment:"Regex to detect when a does a die roll"`
 }
 
 type Google struct {

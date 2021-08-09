@@ -43,6 +43,7 @@ var rosterLock sync.Mutex
 
 // var currentZone string
 var needsLooted []string
+var needsRolled []string
 
 // var raidDumps int
 
@@ -392,6 +393,16 @@ func removeLootFromLooted(item string) {
 	needsLooted = append(needsLooted[:itemPos], needsLooted[itemPos+1:]...)
 }
 
+func removeRollerFromRoll(player string) {
+	var PlayerPos int
+	for pos, name := range needsRolled {
+		if name == player {
+			PlayerPos = pos
+		}
+	}
+	needsRolled = append(needsRolled[:PlayerPos], needsRolled[PlayerPos+1:]...)
+}
+
 // func checkFlagGivers(msg string) bool {
 // 	for _, flaggiver := range configuration.Everquest.FlagGiver {
 // 		if strings.Contains(msg, flaggiver) {
@@ -632,6 +643,7 @@ func (b *BidItem) getWinners(count int) []Winner {
 					rollers = fmt.Sprintf("%s and %s", rollers, b.Bids[i].Bidder)
 					count++
 				}
+				needsRolled = append(needsRolled, b.Bids[i].Bidder)
 			}
 		}
 		rollers = fmt.Sprintf("%s required!", rollers)
