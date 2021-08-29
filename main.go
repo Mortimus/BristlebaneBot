@@ -194,8 +194,8 @@ func parseLogs(ChatLogs chan everquest.EqLog, quit <-chan bool) {
 	printHUD()
 	for msgs := range ChatLogs {
 		currentTime = msgs.T
-		checkClosedBids()
-		parseLogLine(msgs) // Old, should be replaced with plugin system below
+		//checkClosedBids()
+		//parseLogLine(msgs) // Old, should be replaced with plugin system below
 		for _, handler := range Handlers {
 			switch handler.OutputChannel() {
 			case STDOUT:
@@ -1138,6 +1138,20 @@ func getPlayerName(logFile string) string {
 		return "Unknown Player"
 	}
 	return split[1]
+}
+
+func getPlayerServer(logFile string) string {
+	// l := LogInit("getPlayerName-commands.go")
+	// defer l.End()
+	logFile = filepath.Base(logFile)
+	extension := filepath.Ext(logFile)
+	name := logFile[0 : len(logFile)-len(extension)]
+	split := strings.Split(name, "_")
+	// fmt.Printf("LogFile: %s\nExtension: %s\nName: %s\nSplit: %#+v\n", logFile, extension, name, split)
+	if len(split) < 3 {
+		return "unknown"
+	}
+	return split[2]
 }
 
 func getRecentRosterDump(path string) string {

@@ -115,6 +115,12 @@ type Sheets struct {
 	SpellSheetPlayerStartCol int    `comment:"Google sheet sheet column for when player names start"` // Google sheet sheet column for when player names start
 	SpellSheetDataRowStart   int    `comment:"Google sheet sheet row for when spell names start"`     // Google sheet sheet row for when spell names start
 	SpellSheetPlayerRow      int    `comment:"Google sheet sheet row for when player names start"`
+	RawSheetURL              string `comment:"Raw DKP/Attendance sheet URL"` // Google sheets sheet URL for the raw data
+	RawSheetName             string `comment:"Raw DKP/Attendance sheet sheet name"`
+	RawSheetPlayerCol        int    `comment:"Raw DKP/Attendance sheet sheet column for player names"`
+	RawSheetDateCol          int    `comment:"Raw DKP/Attendance sheet sheet column for date"`
+	RawSheetDKPCol           int    `comment:"Raw DKP/Attendance sheet sheet column for dkp"`
+	RawSheetAttendanceCol    int    `comment:"Raw DKP/Attendance sheet sheet column for attendance"`
 }
 
 type Log struct {
