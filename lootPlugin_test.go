@@ -17,7 +17,7 @@ func TestSpellLoot(t *testing.T) {
 	msg.Source = "Mortimus"
 	msg.T = time.Now()
 	plug.LootMatch, _ = regexp.Compile(`--(\w+) has looted a[n]? (.+) from (.+)['s corpse]?[ ]?\.--`)
-	roster["Mortimus"] = &Player{Name: "Mortimus", Class: "Necromancer"}
+	Roster["Mortimus"] = &DKPHolder{GuildMember: everquest.GuildMember{Name: "Mortimus", Class: "Necromancer"}}
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
 	got := b.String()
@@ -35,7 +35,7 @@ func TestAncientLoot(t *testing.T) {
 	msg.Source = "Mortimus"
 	msg.T = time.Now()
 	plug.LootMatch, _ = regexp.Compile(`--(\w+) has looted a[n]? (.+) from (.+)['s corpse]?[ ]?\.--`)
-	roster["Mortimus"] = &Player{Name: "Mortimus", Class: "Necromancer"}
+	Roster["Mortimus"] = &DKPHolder{GuildMember: everquest.GuildMember{Name: "Mortimus", Class: "Necromancer"}}
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
 	got := b.String()
@@ -53,7 +53,7 @@ func TestLootProvider(t *testing.T) {
 	msg.Source = "Mortimus"
 	msg.T = time.Now()
 	plug.LootMatch, _ = regexp.Compile(`--(\w+) has looted a[n]? (.+) from (.+)['s corpse]?[ ]?\.--`)
-	roster["Mortimus"] = &Player{Name: "Mortimus", Class: "Necromancer"}
+	Roster["Mortimus"] = &DKPHolder{GuildMember: everquest.GuildMember{Name: "Mortimus", Class: "Necromancer"}}
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
 	got := b.String()
@@ -71,7 +71,7 @@ func TestAwardedLoot(t *testing.T) {
 	msg.Source = "Mortimus"
 	msg.T = time.Now()
 	plug.LootMatch, _ = regexp.Compile(`--(\w+) has looted a[n]? (.+) from (.+)['s corpse]?[ ]?\.--`)
-	roster["Mortimus"] = &Player{Name: "Mortimus", Class: "Necromancer"}
+	Roster["Mortimus"] = &DKPHolder{GuildMember: everquest.GuildMember{Name: "Mortimus", Class: "Necromancer"}}
 	needsLooted = []string{"Cloth Cap"}
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -101,7 +101,7 @@ func TestAwardedSelfLoot(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.LootMatch, _ = regexp.Compile(`--(\w+) ha\w{1,2} looted a[n]? (.+) from (.+)['s corpse]?[ ]?\.--`)
-	roster["Mortimus"] = &Player{Name: "Mortimus", Class: "Necromancer"}
+	Roster["Mortimus"] = &DKPHolder{GuildMember: everquest.GuildMember{Name: "Mortimus", Class: "Necromancer"}}
 	needsLooted = []string{"Cloth Cap"}
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -120,7 +120,8 @@ func TestInferredLoot(t *testing.T) {
 	msg.Source = "Mortimus"
 	msg.T = time.Now()
 	plug.LootMatch, _ = regexp.Compile(`--(\w+) has looted a[n]? (.+) from (.+)['s corpse]?[ ]?\.--`)
-	roster["Mortimus"] = &Player{Name: "Mortimus", Class: "Necromancer"}
+	// Roster["Mortimus"] = &DKPHolder{Name: "Mortimus", Class: "Necromancer"}
+	Roster["Mortimus"] = &DKPHolder{GuildMember: everquest.GuildMember{Name: "Mortimus", Class: "Necromancer"}}
 	needsLooted = []string{"Chaos Runes"}
 	var b bytes.Buffer
 	plug.Handle(msg, &b)

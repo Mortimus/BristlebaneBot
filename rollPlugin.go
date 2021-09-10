@@ -9,6 +9,8 @@ import (
 	everquest "github.com/Mortimus/goEverquest"
 )
 
+var needsRolled []string
+
 type RollPlugin struct {
 	Plugin
 	RollMatch *regexp.Regexp
@@ -41,13 +43,23 @@ func (p *RollPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			}
 			for _, rollers := range needsRolled {
 				if rollers == player {
-					fmt.Fprintf(out, "%s rolled a %d\n", player, result)
+					fmt.Fprintf(out, "```ini\n[%s rolled a %d]\n```", player, result)
 					removeRollerFromRoll(player)
 					return
 				}
 			}
 		}
 	}
+}
+
+func removeRollerFromRoll(player string) {
+	var PlayerPos int
+	for pos, name := range needsRolled {
+		if name == player {
+			PlayerPos = pos
+		}
+	}
+	needsRolled = append(needsRolled[:PlayerPos], needsRolled[PlayerPos+1:]...)
 }
 
 func (p *RollPlugin) Info(out io.Writer) {

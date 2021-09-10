@@ -9,6 +9,8 @@ import (
 	everquest "github.com/Mortimus/goEverquest"
 )
 
+var needsLooted []string
+
 // type LootPlugin Plugin
 type LootPlugin struct {
 	Plugin
@@ -40,8 +42,8 @@ func (p *LootPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			corpse := match[3]
 			// fmt.Printf("%#+v\n", loot)
 			class := "Unknown"
-			if _, ok := roster[player]; ok {
-				class = roster[player].Class
+			if _, ok := Roster[player]; ok {
+				class = Roster[player].Class
 			}
 			if loot != "" && strings.Contains(loot, "Spell: ") || strings.Contains(loot, "Ancient: ") || isSpellProvider(loot) || isAwardedLoot(loot) {
 				// Lookup spell name, and what players need it
@@ -83,6 +85,16 @@ func isAwardedLoot(item string) bool {
 		}
 	}
 	return false
+}
+
+func removeLootFromLooted(item string) {
+	var itemPos int
+	for pos, name := range needsLooted {
+		if name == item {
+			itemPos = pos
+		}
+	}
+	needsLooted = append(needsLooted[:itemPos], needsLooted[itemPos+1:]...)
 }
 
 func getItemDesc(item everquest.Item) string {

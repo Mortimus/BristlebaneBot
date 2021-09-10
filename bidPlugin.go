@@ -1,12 +1,17 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -29,11 +34,12 @@ type OpenBid struct {
 	Duration             time.Duration
 	Start                time.Time
 	End                  time.Time
-	Tells                []everquest.EqLog
 	Bidders              []*Bidder
 	Zone                 string
 	SecondMainBidsAsMain bool
 	SecondMainMaxBid     int
+	WinningBid           int
+	MessageID            string
 }
 
 type Bidder struct {
@@ -41,6 +47,7 @@ type Bidder struct {
 	AttemptedBid int
 	Bid          int
 	Message      everquest.EqLog
+	WonOrTied    bool
 }
 
 // DKP Ranks
@@ -82,11 +89,9 @@ func init() {
 	if err != nil {
 		fmt.Printf("Error finding roster dump: %s", err.Error())
 	} else {
-		// var guild *everquest.Guild
 		guild := new(everquest.Guild)
 		fileLog := log.New(os.Stdout, "[WARN] ", log.Lshortfile|log.Ldate|log.Ltime|log.LUTC|log.Lmsgprefix)
 		fullpath := configuration.Everquest.BaseFolder + "/" + path
-		// fmt.Printf("FullPath: %s\n", fullpath)
 		err := guild.LoadFromPath(fullpath, fileLog)
 		if err != nil {
 			fmt.Printf("Error loading roster dump: %s", err.Error())
@@ -124,10 +129,19 @@ func updateGuildRoster(guild *everquest.Guild) {
 			}
 		}
 	}
-	updateRosterDKP()
+	// updateRosterDKP()
 }
 
 func updateRosterDKP() {
+	// Clear Roster
+	// Roster = make(map[string]*DKPHolder)
+	for _, member := range Roster { // zero out the roster
+		member.DKP = 0
+		member.Thirty = 0
+		member.Sixty = 0
+		member.Ninety = 0
+		member.AllTime = 0
+	}
 	// TODO: Update DKP and Attendance
 	// Info.Printf("Getting Attendance from Google Sheets\n")
 	spreadsheetID := configuration.Sheets.RawSheetURL
@@ -148,7 +162,7 @@ func updateRosterDKP() {
 			}
 			name := fmt.Sprintf("%s", row[configuration.Sheets.RawSheetPlayerCol])
 			name = strings.TrimSpace(name)
-			name = strings.ToTitle(name)
+			name = strings.Title(name)
 			if name != "" {
 				// 06/27/20
 				dateString := fmt.Sprintf("%s", row[configuration.Sheets.RawSheetDateCol])
@@ -157,7 +171,7 @@ func updateRosterDKP() {
 				}
 				date, err := time.Parse("01/02/06", dateString)
 				if err != nil {
-					Err.Printf("Error converting attendance time to time.Time: %s", err.Error())
+					Err.Printf("Error converting attendance time to time.Time at row %d: %s", i+1, err.Error())
 					// continue
 					date = time.Date(2006, 1, 1, 0, 0, 0, 0, time.Local) // set to some old date so it's not counted towards current attendance
 				}
@@ -167,7 +181,7 @@ func updateRosterDKP() {
 				}
 				dkpPoints, err := strconv.Atoi(dkpString)
 				if err != nil {
-					Err.Printf("Error converting attendance points to float: %s", err.Error())
+					Err.Printf("Error converting attendance points to float at row %d: %s", i+1, err.Error())
 					// continue
 					dkpPoints = 0
 				}
@@ -177,7 +191,7 @@ func updateRosterDKP() {
 				}
 				attPoints, err := strconv.ParseFloat(attString, 64)
 				if err != nil {
-					Err.Printf("Error converting attendance points to float: %s", err.Error())
+					Err.Printf("Error converting attendance points to float at row %d: %s", i+1, err.Error())
 					// continue
 					attPoints = 0.0
 				}
@@ -185,6 +199,7 @@ func updateRosterDKP() {
 			}
 		}
 	}
+	updateAltDKP()
 }
 
 func addDKPAttendance(name string, date time.Time, dkp int, attendance float64) {
@@ -201,6 +216,21 @@ func addDKPAttendance(name string, date time.Time, dkp int, attendance float64) 
 		}
 		if date.After(time.Now().AddDate(0, 0, -90)) {
 			Roster[name].Ninety += attendance
+		}
+	}
+}
+
+func updateAltDKP() {
+	for _, member := range Roster {
+		if member.GuildMember.Alt {
+			if _, ok := Roster[member.GuildMember.Name]; ok {
+				// fmt.Printf("Updating %s with %s' DKP", name, member.GuildMember.Name)
+				Roster[member.GuildMember.Name].DKP = Roster[getMain(&member.GuildMember)].DKP
+				Roster[member.GuildMember.Name].AllTime = Roster[getMain(&member.GuildMember)].AllTime
+				Roster[member.GuildMember.Name].Thirty = Roster[getMain(&member.GuildMember)].Thirty
+				Roster[member.GuildMember.Name].Sixty = Roster[getMain(&member.GuildMember)].Sixty
+				Roster[member.GuildMember.Name].Ninety = Roster[getMain(&member.GuildMember)].Ninety
+			}
 		}
 	}
 }
@@ -226,6 +256,24 @@ func getDKPRank(member *everquest.GuildMember) DKPRank {
 	}
 
 	return INACTIVE
+}
+
+func getMain(member *everquest.GuildMember) string { // TODO: Fix -> account for no apostraphe
+	if member.Alt {
+		if strings.Contains(member.PublicNote, "'") { // Mortimus's 2nd Main Mortimus's Alt
+			s := strings.Split(member.PublicNote, "'")
+			if _, ok := Roster[s[0]]; ok {
+				return s[0]
+			}
+		}
+		if strings.Contains(member.PublicNote, " ") { // Mortimus 2nd Main Mortimus Alt
+			s := strings.Split(member.PublicNote, " ")
+			if _, ok := Roster[s[0]]; ok {
+				return s[0]
+			}
+		}
+	}
+	return member.Name
 }
 
 func DKPRankToString(rank DKPRank) string {
@@ -280,13 +328,12 @@ func (p *BidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 				if id != -1 {
 					if _, ok := p.Bids[id]; ok { // Only close bids if item is in the map
 						item, _ := itemDB.GetItemByID(id)
-						// Dump investigation info
-
+						p.Bids[id].CloseBids(out)
 						// Remove item from map
 						delete(p.Bids, id)
-						fmt.Fprintf(out, "Closed bids on %s(x%d)\n", item.Name, count)
+						Info.Printf("Closed bids on %s (x%d)\n", item.Name, count)
 					} else {
-						fmt.Fprintf(out, "Bids already closed for %s(x%d)\n", itemName, count)
+						Err.Printf("Bids already closed for %s(x%d)\n", itemName, count)
 					}
 				}
 			}
@@ -334,7 +381,7 @@ func (p *BidPlugin) OpenBid(itemID int, quantity int, minutes int, out io.Writer
 	}
 	if _, ok := p.Bids[itemID]; !ok { // Only open bids if item is not already in the map
 		item, _ := itemDB.GetItemByID(itemID)
-		bidders := make([]*Bidder, 1)
+		bidders := make([]*Bidder, 0)
 		// for i := range bidders {
 		// 	bidders[i] = new(Bidder)
 		// }
@@ -344,14 +391,25 @@ func (p *BidPlugin) OpenBid(itemID int, quantity int, minutes int, out io.Writer
 			Duration:             time.Duration(minutes) * time.Minute,
 			Start:                time.Now(),
 			End:                  time.Now().Add(time.Duration(minutes) * time.Minute),
-			Tells:                []everquest.EqLog{},
 			Bidders:              bidders,
 			Zone:                 currentZone,
 			SecondMainBidsAsMain: configuration.Bids.SecondMainsBidAsMains,
 			SecondMainMaxBid:     configuration.Bids.SecondMainAsMainMaxBid,
 		}
-		fmt.Fprintf(out, "Bids open on %s(x%d) for %d minutes.\n", item.Name, quantity, minutes)
+		p.Bids[itemID].MessageID = DiscordF(configuration.Discord.LootChannelID, "> Bids open on %s (x%d) for %d minutes.\n```%s```%s%d", item.Name, quantity, minutes, getItemDesc(item), configuration.Main.LucyURLPrefix, item.ID)
+		// fmt.Fprintf(out, "> Bids open on %s (x%d) for %d minutes.\n```%s```%s%d", item.Name, quantity, minutes, getItemDesc(item), configuration.Main.LucyURLPrefix, item.ID)
 		return nil
+	} else {
+		if p.Bids[itemID].Quantity != quantity { // Modify amount of winners
+			// fmt.Fprintf(out, "Changing %s bid quantity to %d", p.Bids[itemID].Item.Name, quantity)
+			header := fmt.Sprintf("> Bids open on %s (x%d) for %d minutes.", p.Bids[itemID].Item.Name, quantity, minutes)
+			err := updateHeader(configuration.Discord.LootChannelID, p.Bids[itemID].MessageID, header)
+			if err != nil {
+				Err.Println(err)
+			}
+			p.Bids[itemID].Quantity = quantity
+			return nil
+		}
 	}
 	return errors.New("bids already open for item: " + strconv.Itoa(itemID))
 }
@@ -373,44 +431,437 @@ func (b *OpenBid) AddBid(player DKPHolder, amount int, msg everquest.EqLog) {
 	}
 }
 
-func (b *OpenBid) CloseBids() {
+func (b *OpenBid) CloseBids(out io.Writer) {
+	b.End = time.Now()
 	// Refresh DKP
-
-	// Remove cancelled bids
-	b.RemoveCancelledBids()
+	updateRosterDKP()
+	// Remove cancelled bids -> we'll keep their bid but not let bids of <=0 win/tie
+	// b.RemoveCancelledBids()
 	// Update max dkp based on attempted amount
 	b.ApplyDKP()
 	// Sort bidders by highest accounting for rank
-
+	b.SortBids()
 	// Check for ties
+	ties := b.CheckTiesAndApplyWinners()
+	var tieCount int
+	var tieAnnounce string
+	for tie := range ties {
+		needsRolled = append(needsRolled, tie) // This allows for roll detection
+		if tieCount == 0 {
+			tieAnnounce = fmt.Sprintf("```diff\n- /rand 1000 needed for %s from %s", b.Item.Name, tie)
+		} else {
+			tieAnnounce = fmt.Sprintf("%s, %s", tieAnnounce, tie)
+		}
+		tieCount++
+	}
+	var tied bool
+	if tieCount > 0 {
+		tieAnnounce = fmt.Sprintf("%s```", tieAnnounce)
+		// fmt.Fprintf(out, "%s```", tieAnnounce)
+		tied = true
+		err := updateMessage(configuration.Discord.LootChannelID, b.MessageID, tieAnnounce)
+		if err != nil {
+			Err.Println(err)
+		}
+	}
+	// Find winning cost
+	b.WinningBid = b.FindWinningBid()
+	// Announce winner and include rot if needed
+	winners := b.GetWinnerNames()
+	if len(winners) < b.Quantity {
+		// Fill remaining with Rots
+		neededWinners := b.Quantity - len(winners)
+		for i := 0; i < neededWinners; i++ {
+			winners = append(winners, "Rot")
+		}
+	}
+	if !tied {
+		wonMessage := fmt.Sprintf("> %s (x%d) won for %d DKP", b.Item.Name, b.Quantity, b.WinningBid)
+		err := updateHeader(configuration.Discord.LootChannelID, b.MessageID, wonMessage)
+		if err != nil {
+			Err.Println(err)
+		}
+	} else {
+		wonMessage := fmt.Sprintf("> %s (x%d) won for %d DKP AFTER roll off", b.Item.Name, b.Quantity, b.WinningBid)
+		err := updateHeader(configuration.Discord.LootChannelID, b.MessageID, wonMessage)
+		if err != nil {
+			Err.Println(err)
+		}
+	}
+	b.GenerateInvestigation()
+	winnerMessage := "```"
 
-	// Fill in Rot as needed
+	for i, win := range winners {
+		if win == "Rot" {
+			winnerMessage = fmt.Sprintf("%s%d: %s\n", winnerMessage, i+1, win)
+		} else {
+			winnerMessage = fmt.Sprintf("%s%d: %s\t%d - %d = %d DKP\n", winnerMessage, i+1, win, Roster[win].DKP, b.WinningBid, Roster[win].DKP-b.WinningBid)
+		}
 
-	// Announce winner
-
+	}
+	winnerMessage = fmt.Sprintf("> Winner(s)\n%s```", winnerMessage)
+	// TODO: Update original message with this info appended
+	err := updateMessage(configuration.Discord.LootChannelID, b.MessageID, winnerMessage)
+	if err != nil {
+		Err.Println(err)
+	}
+	err = updateMessage(configuration.Discord.LootChannelID, b.MessageID, "   v\t\t[INVESTIGATE WITH REACT]")
+	if err != nil {
+		Err.Println(err)
+	}
+	err = discord.MessageReactionAdd(configuration.Discord.LootChannelID, b.MessageID, configuration.Discord.InvestigationStartEmoji)
+	if err != nil {
+		Err.Printf("Error adding base reaction: %s", err.Error())
+	}
+	// fmt.Fprintf(out, "%s```[%s]", winnerMessage, hash)
 	// Write closed bid investigation file
 
 }
 
-func (b *OpenBid) RemoveCancelledBids() {
-	for i := range b.Bidders { // TODO: This won't work cause we modify the slice in the loop
-		if b.Bidders[i].AttemptedBid <= 0 {
-			b.Bidders = append(b.Bidders[:i], b.Bidders[i+1:]...) // Todo: does this work if bid is final bid in slice
+func updateMessage(channelID, messageID, append string) error {
+	msg, err := discord.ChannelMessage(channelID, messageID)
+	if err != nil {
+		return err
+	}
+	content := msg.Content
+	content = fmt.Sprintf("%s\n%s\n", content, append)
+	_, err = discord.ChannelMessageEdit(channelID, messageID, content)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func updateHeader(channelID, messageID, header string) error {
+	msg, err := discord.ChannelMessage(channelID, messageID)
+	if err != nil {
+		return err
+	}
+	content := msg.Content
+	split := strings.Split(content, "\n")
+	split[0] = header
+	content = strings.Join(split, "\n")
+	_, err = discord.ChannelMessageEdit(channelID, messageID, content)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type BidInvestigation struct {
+	WinningBid           int                   `json:"WinningBid"`
+	ItemName             string                `json:"ItemName"`
+	Quantity             int                   `json:"Quantity"`
+	SecondMainBidsAsMain bool                  `json:"SecondMainBidsAsMain"`
+	SecondMainMaxBid     int                   `json:"SecondMainMaxBid"`
+	Started              string                `json:"Started"`
+	Ended                string                `json:"Ended"`
+	Bidders              []InvestigationBidder `json:"Bidders"`
+	Logs                 []InvestigationLog    `json:"Logs"`
+}
+
+type InvestigationBidder struct {
+	Player       string `json:"Player"`
+	Main         string `json:"Main"`
+	BidAttempted int    `json:"BidAttempted"`
+	BidApplied   int    `json:"BidApplied"`
+	DKP          int    `json:"DKP"`
+	DKPRank      string `json:"DKPRank"`
+	DKPRankValue int    `json:"DKPRankValue"`
+	CanEquip     bool   `json:"CanEquip"`
+	Message      string `json:"Message"`
+	WonOrTied    bool   `json:"WonOrTied"`
+}
+
+type InvestigationLog struct {
+	Message      string `json:"Message"`
+	Received     string `json:"Received"`
+	Player       string `json:"Player"`
+	Main         string `json:"Main"`
+	DKP          int    `json:"DKP"`
+	DKPRank      string `json:"DKPRank"`
+	DKPRankValue int    `json:"DKPRankValue"`
+	CanEquip     bool   `json:"CanEquip"`
+	InBidWindow  bool   `json:"InBidWindow"`
+}
+
+func (b *OpenBid) GenerateInvestigation() string {
+	var Bidders []InvestigationBidder
+	for _, bidder := range b.Bidders {
+		Bidders = append(Bidders, InvestigationBidder{
+			Player:       bidder.Player.Name,
+			Main:         getMain(&bidder.Player.GuildMember),
+			BidAttempted: bidder.AttemptedBid,
+			BidApplied:   bidder.Bid,
+			DKP:          bidder.Player.DKP,
+			DKPRank:      DKPRankToString(bidder.Player.DKPRank),
+			DKPRankValue: int(bidder.Player.DKPRank),
+			CanEquip:     canEquip(b.Item, bidder.Player.GuildMember),
+			Message:      bidder.Message.Msg,
+			WonOrTied:    bidder.WonOrTied,
+		})
+	}
+	var Logs []InvestigationLog
+	for _, log := range investigation.Messages {
+		var gMember *DKPHolder
+		if log.Source == "You" {
+			log.Source = getPlayerName(configuration.Everquest.LogPath)
+		}
+		if _, ok := Roster[log.Source]; ok {
+			gMember = Roster[log.Source]
+		} else {
+			Err.Printf("Cannot find %s in roster\n", log.Source)
+			gMember = genUnknownMember(log.Source)
+		}
+		// fmt.Printf("Main of %s is %s :: Msg: %s\n", log.Source, getMain(&gMember.GuildMember), log.Msg)
+		BidLog := InvestigationLog{
+			Message:      log.Msg,
+			Received:     log.T.Format(time.RFC822),
+			Player:       log.Source,
+			Main:         getMain(&gMember.GuildMember),
+			DKP:          gMember.DKP,
+			DKPRank:      DKPRankToString(gMember.DKPRank),
+			DKPRankValue: int(gMember.DKPRank),
+			CanEquip:     canEquip(b.Item, gMember.GuildMember),
+			InBidWindow:  isBetweenTime(log.T, b.Start, b.End), // TODO: Calculate if this was in the window
+		}
+		Logs = append(Logs, BidLog)
+	}
+	investigation := BidInvestigation{
+		WinningBid:           b.WinningBid,
+		ItemName:             b.Item.Name,
+		Quantity:             b.Quantity,
+		SecondMainBidsAsMain: b.SecondMainBidsAsMain,
+		SecondMainMaxBid:     b.SecondMainMaxBid,
+		Started:              b.Start.Format(time.RFC822),
+		Ended:                b.End.Format(time.RFC822),
+		Bidders:              Bidders,
+		Logs:                 Logs,
+	}
+	// hash := AsSha256(investigation)
+	hash := b.MessageID
+	filename := hash + ".json"
+	Info.Printf("Writing archive %s to file", filename)
+	file, err := json.MarshalIndent(investigation, "", " ")
+	if err != nil {
+		Err.Printf("Error converting to JSON: %s", err.Error())
+	}
+
+	err = ioutil.WriteFile("archive/"+filename, file, 0644)
+	if err != nil {
+		Err.Printf("Error writing archive to file: %s", err.Error())
+	}
+	archives = append(archives, hash) // add to known archive
+	return hash
+}
+
+func isBetweenTime(t time.Time, start, end time.Time) bool {
+	return t.After(start) && t.Before(end)
+}
+
+func getArchiveList() []string { // TODO: get directory listing on archives
+	var files []string
+
+	root := "./archive"
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error { // This can never have an error TODO: fix this
+		name := strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
+		files = append(files, name)
+		return nil
+	})
+	if err != nil {
+		Err.Printf("Error reading archives: %s", err.Error())
+	}
+	return files
+}
+
+func isArchive(id string) bool {
+	for _, arc := range archives {
+		if arc == id {
+			return true
+		}
+	}
+	return false
+}
+
+func genUnknownMember(name string) *DKPHolder {
+	guildMember := everquest.GuildMember{
+		Name:                name,
+		Level:               0,
+		Class:               "Unknown",
+		Rank:                "Unknown",
+		Alt:                 false,
+		LastOnline:          time.Now(),
+		Zone:                "Unknown",
+		PublicNote:          "Who am I?",
+		PersonalNote:        "Who am I?",
+		TributeStatus:       false,
+		TrophyTributeStatus: false,
+		Donations:           -1,
+	}
+	return &DKPHolder{
+		GuildMember: guildMember,
+		DKP:         0,
+		DKPRank:     INACTIVE,
+		Thirty:      0,
+		Sixty:       0,
+		Ninety:      0,
+		AllTime:     0,
+	}
+}
+
+// func printRoster() {
+// 	for player, _ := range Roster {
+// 		fmt.Printf("%s\n", player)
+// 	}
+// }
+
+func AsSha256(o interface{}) string {
+	h := sha256.New()
+	h.Write([]byte(fmt.Sprintf("%v", o)))
+
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func canEquip(item everquest.Item, player everquest.GuildMember) bool { // TODO: new func, need to add this check to this plugin, and auto investigate if it influences the winner
+	classes := item.GetClasses()
+	for _, class := range classes {
+		if class == player.Class {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *OpenBid) FindWinningBid() int {
+	var winningBid int
+	var winners int
+	var winRank DKPRank
+	for i, bidder := range b.Bidders {
+		if i == 0 {
+			winRank = GetEffectiveDKPRank(bidder.Player.DKPRank)
+		}
+		if bidder.Bid > 0 {
+			winningBid = bidder.Bid
+		}
+		winners++
+		if winners > b.Quantity {
+			break
+		}
+		if GetEffectiveDKPRank(bidder.Player.DKPRank) != winRank { // Lower ranks can't upbid higher ranks
+			return configuration.Bids.MinimumBid
+		}
+		if winningBid == 0 && len(b.Bidders) == i+1 {
+			return 0 // no winner, Rot wins
+		}
+		if len(b.Bidders) == i+1 { // we are on the last bidder and still have items to hand out, lowest possible bid won
+			return configuration.Bids.MinimumBid
+		}
+	}
+	return winningBid
+}
+
+func (b *OpenBid) CheckTiesAndApplyWinners() map[string]interface{} { // We are assuming bids are applied and sorted before this is called
+	tiedPlayers := make(map[string]interface{})
+	if len(b.Bidders) <= b.Quantity {
+		return tiedPlayers // more items than potential ties, so no ties
+	}
+	var tieBid int
+	var tiedRank DKPRank
+	var validBids int
+	for i := range b.Bidders {
+		if b.Bidders[i].Bid == 0 {
+			continue // a main can cancel and a lower tier might tie
+		}
+		validBids++
+		if validBids <= b.Quantity && tieBid != b.Bidders[i].Bid {
+			b.Bidders[i].WonOrTied = true
+			tieBid = b.Bidders[i].Bid
+			tiedRank = GetEffectiveDKPRank(b.Bidders[i].Player.DKPRank)
+			tiedPlayers = make(map[string]interface{}) // clear the tied, we might have had guaranteed winners that tied
+			continue                                   // not a tie, check next bid
+		}
+		if validBids > b.Quantity && tieBid != b.Bidders[i].Bid {
+			return tiedPlayers // we have found all the possible tie bids, so we are done
+		}
+		if tieBid == b.Bidders[i].Bid && GetEffectiveDKPRank(b.Bidders[i].Player.DKPRank) == tiedRank {
+			b.Bidders[i].WonOrTied = true
+			tiedPlayers[b.Bidders[i-1].Player.Name] = nil // ensure the original tie bid is here
+			tiedPlayers[b.Bidders[i].Player.Name] = nil
+		}
+	}
+	return tiedPlayers
+}
+
+func (b *OpenBid) GetWinnerNames() []string {
+	var winners []string
+	for _, bidder := range b.Bidders {
+		if bidder.WonOrTied {
+			winners = append(winners, bidder.Player.Name)
+		}
+	}
+	return winners
+}
+
+func (b *OpenBid) SortBids() { // TODO: This isn't working correctly -> fixed, but check testing
+	sort.Sort(sort.Reverse(ByBid(b.Bidders)))
+	sort.Sort(sort.Reverse(ByRank(b.Bidders)))
+}
+
+type ByBid []*Bidder
+
+func (a ByBid) Len() int           { return len(a) }
+func (a ByBid) Less(i, j int) bool { return a[i].Bid < a[j].Bid }
+func (a ByBid) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
+type ByRank []*Bidder
+
+func (a ByRank) Len() int { return len(a) }
+func (a ByRank) Less(i, j int) bool {
+	return GetEffectiveDKPRank(a[i].Player.DKPRank) < GetEffectiveDKPRank(a[j].Player.DKPRank)
+}
+func (a ByRank) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+func GetEffectiveDKPRank(rank DKPRank) DKPRank {
+	if configuration.Bids.SecondMainsBidAsMains && rank == SECONDMAIN {
+		return MAIN
+	}
+	return rank
+}
+
+func (b *OpenBid) ApplyDKP() {
+	for i := range b.Bidders {
+		b.Bidders[i].Player.DKP = Roster[getMain(&b.Bidders[i].Player.GuildMember)].DKP // Apply the latest roster values to the bidder -> move to a function and apply secondmain/alt dkp
+		if b.Bidders[i].AttemptedBid > b.Bidders[i].Player.DKP {
+			if b.Bidders[i].Player.DKP < configuration.Bids.MinimumBid { // Todo: Need to make a test for this
+				b.Bidders[i].Bid = configuration.Bids.MinimumBid
+			} else {
+				b.Bidders[i].Bid = b.Bidders[i].Player.DKP
+			}
+		} else {
+			b.Bidders[i].Bid = b.Bidders[i].AttemptedBid
+		}
+		if b.Bidders[i].AttemptedBid > 0 && b.Bidders[i].AttemptedBid < configuration.Bids.MinimumBid {
+			b.Bidders[i].Bid = configuration.Bids.MinimumBid
+		}
+		if b.Bidders[i].AttemptedBid%configuration.Bids.Increments != 0 { // if you fail to bid in correct increments, we are setting you to minimum bid
+			b.Bidders[i].Bid = configuration.Bids.MinimumBid
+		}
+		if b.Bidders[i].AttemptedBid <= 0 { // Cancelled Bid
+			b.Bidders[i].Bid = 0
+		}
+		if configuration.Bids.SecondMainsBidAsMains && b.Bidders[i].Player.DKPRank == SECONDMAIN && b.Bidders[i].Bid > configuration.Bids.SecondMainAsMainMaxBid && b.MainsHaveBid() { // Only limit 2nd main bid if mains have bid
+			b.Bidders[i].Bid = configuration.Bids.SecondMainAsMainMaxBid
 		}
 	}
 }
 
-func (b *OpenBid) ApplyDKP() { // TODO: Limit 2nd mains to 200 if mains bid
+func (b *OpenBid) MainsHaveBid() bool {
 	for i := range b.Bidders {
-		if b.Bidders[i].AttemptedBid > b.Bidders[i].Player.DKP {
-			b.Bidders[i].Bid = b.Bidders[i].Player.DKP
-		} else {
-			b.Bidders[i].Bid = b.Bidders[i].AttemptedBid
-		}
-		if b.Bidders[i].Bid <= 0 {
-			b.Bidders[i].Bid = configuration.Bids.MinimumBid
+		if b.Bidders[i].Player.DKPRank == MAIN && b.Bidders[i].AttemptedBid > 0 {
+			return true
 		}
 	}
+	return false
 }
 
 func (b *OpenBid) FindBid(name string) int {

@@ -21,7 +21,7 @@ func TestRoll(t *testing.T) {
 	plug.RollMatch, _ = regexp.Compile(`\*\*A Magic Die is rolled by (\w+). It could have been any number from (\d+) to (\d+), but this time it turned up a (\d+).`)
 	plug.Handle(msg, &b)
 	got := b.String()
-	want := "Mortimus rolled a 894\n"
+	want := "```ini\n[Mortimus rolled a 894]\n```"
 	if got != want {
 		t.Errorf("plug.Handle(msg, &b) = %q, want %q", got, want)
 	}

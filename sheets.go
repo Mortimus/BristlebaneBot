@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	everquest "github.com/Mortimus/goEverquest"
@@ -102,39 +101,39 @@ type Gtoken struct {
 	Installed Inst `json:"installed"`
 }
 
-func updateDKP() {
-	spreadsheetID := configuration.Sheets.DKPSheetURL
-	readRange := configuration.Sheets.DKPSummarySheetName
-	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, readRange).Do()
-	if err != nil {
-		Err.Printf("Unable to retrieve data from sheet: %v", err)
-		return
-	}
+// func updateDKP() {
+// 	spreadsheetID := configuration.Sheets.DKPSheetURL
+// 	readRange := configuration.Sheets.DKPSummarySheetName
+// 	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, readRange).Do()
+// 	if err != nil {
+// 		Err.Printf("Unable to retrieve data from sheet: %v", err)
+// 		return
+// 	}
 
-	if len(resp.Values) == 0 {
-		Err.Printf("Cannot read dkp sheet: %v", resp)
-		// log.Println("No data found.")
-	} else {
-		// var lastClass string
-		for i, row := range resp.Values {
-			if i == 0 { // skip the header
-				continue
-			}
-			name := fmt.Sprintf("%s", row[configuration.Sheets.DKPSummarySheetPlayerCol])
-			name = strings.TrimSpace(name)
-			if name != "" {
-				sDKP := fmt.Sprintf("%s", row[configuration.Sheets.DKPSummarySheetDKPCol])
-				sDKP = strings.ReplaceAll(sDKP, ",", "")
-				dkp, err := strconv.Atoi(sDKP)
-				if err != nil {
-					Err.Printf("Error converting DKP to int: %s", err.Error())
-					continue
-				}
-				updatePlayerDKP(name, dkp)
-			}
-		}
-	}
-}
+// 	if len(resp.Values) == 0 {
+// 		Err.Printf("Cannot read dkp sheet: %v", resp)
+// 		// log.Println("No data found.")
+// 	} else {
+// 		// var lastClass string
+// 		for i, row := range resp.Values {
+// 			if i == 0 { // skip the header
+// 				continue
+// 			}
+// 			name := fmt.Sprintf("%s", row[configuration.Sheets.DKPSummarySheetPlayerCol])
+// 			name = strings.TrimSpace(name)
+// 			if name != "" {
+// 				sDKP := fmt.Sprintf("%s", row[configuration.Sheets.DKPSummarySheetDKPCol])
+// 				sDKP = strings.ReplaceAll(sDKP, ",", "")
+// 				dkp, err := strconv.Atoi(sDKP)
+// 				if err != nil {
+// 					Err.Printf("Error converting DKP to int: %s", err.Error())
+// 					continue
+// 				}
+// 				updatePlayerDKP(name, dkp)
+// 			}
+// 		}
+// 	}
+// }
 
 func findWhoNeedsSpell(s everquest.Spell) []string {
 	spreadsheetID := configuration.Sheets.SpellSheetURL
