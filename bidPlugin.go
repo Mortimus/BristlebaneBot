@@ -340,7 +340,6 @@ func (p *BidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 		}
 	}
 	if msg.Channel == "tell" {
-		// TODO: Add tell to investigation log
 		// fmt.Printf("Got tell!: %#+v\n", msg)
 		result := p.BidAddMatch.FindStringSubmatch(msg.Msg)
 		if len(result) >= 2 {
@@ -426,6 +425,9 @@ func (b *OpenBid) AddBid(player DKPHolder, amount int, msg everquest.EqLog) {
 			AttemptedBid: amount,
 			Message:      msg,
 		}
+		if !canEquip(b.Item, player.GuildMember) {
+			DiscordF(configuration.Discord.InvestigationChannelID, "A player bid on %s that cannot use it, if it is not cancelled it will be auto investigated. [%s]\n", b.Item.Name, b.Item.GetClasses())
+		}
 		// fmt.Printf("Bidder: %#+v\n", bidder)
 		b.Bidders = append(b.Bidders, bidder)
 	}
@@ -491,13 +493,18 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 	b.GenerateInvestigation()
 	winnerMessage := "```"
 
+	var playerWon bool
 	for i, win := range winners {
 		if win == "Rot" {
 			winnerMessage = fmt.Sprintf("%s%d: %s\n", winnerMessage, i+1, win)
 		} else {
+			playerWon = true
 			winnerMessage = fmt.Sprintf("%s%d: %s\t%d - %d = %d DKP\n", winnerMessage, i+1, win, Roster[win].DKP, b.WinningBid, Roster[win].DKP-b.WinningBid)
 		}
 
+	}
+	if playerWon { // don't require looted for rotted items
+		needsLooted = append(needsLooted, b.Item.Name)
 	}
 	winnerMessage = fmt.Sprintf("> Winner(s)\n%s```", winnerMessage)
 	// TODO: Update original message with this info appended
@@ -505,13 +512,16 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 	if err != nil {
 		Err.Println(err)
 	}
-	err = updateMessage(configuration.Discord.LootChannelID, b.MessageID, "   v\t\t[INVESTIGATE WITH REACT]")
+	err = updateMessage(configuration.Discord.LootChannelID, b.MessageID, "   v\t\t[INVESTIGATION READY]")
 	if err != nil {
 		Err.Println(err)
 	}
 	err = discord.MessageReactionAdd(configuration.Discord.LootChannelID, b.MessageID, configuration.Discord.InvestigationStartEmoji)
 	if err != nil {
 		Err.Printf("Error adding base reaction: %s", err.Error())
+	}
+	if b.AutoInvestigate() {
+		uploadArchive(b.MessageID)
 	}
 	// fmt.Fprintf(out, "%s```[%s]", winnerMessage, hash)
 	// Write closed bid investigation file
@@ -623,7 +633,7 @@ func (b *OpenBid) GenerateInvestigation() string {
 			DKPRank:      DKPRankToString(gMember.DKPRank),
 			DKPRankValue: int(gMember.DKPRank),
 			CanEquip:     canEquip(b.Item, gMember.GuildMember),
-			InBidWindow:  isBetweenTime(log.T, b.Start, b.End), // TODO: Calculate if this was in the window
+			InBidWindow:  isBetweenTime(log.T, b.Start, b.End),
 		}
 		Logs = append(Logs, BidLog)
 	}
@@ -657,6 +667,15 @@ func (b *OpenBid) GenerateInvestigation() string {
 
 func isBetweenTime(t time.Time, start, end time.Time) bool {
 	return t.After(start) && t.Before(end)
+}
+
+func (b *OpenBid) AutoInvestigate() bool {
+	for _, bidder := range b.Bidders {
+		if bidder.Bid > 0 && !canEquip(b.Item, bidder.Player.GuildMember) {
+			return true
+		}
+	}
+	return false
 }
 
 func getArchiveList() []string { // TODO: get directory listing on archives
@@ -763,6 +782,9 @@ func (b *OpenBid) FindWinningBid() int {
 func (b *OpenBid) CheckTiesAndApplyWinners() map[string]interface{} { // We are assuming bids are applied and sorted before this is called
 	tiedPlayers := make(map[string]interface{})
 	if len(b.Bidders) <= b.Quantity {
+		for i := range b.Bidders { // Everyone is a winner!
+			b.Bidders[i].WonOrTied = true
+		}
 		return tiedPlayers // more items than potential ties, so no ties
 	}
 	var tieBid int

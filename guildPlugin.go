@@ -44,6 +44,10 @@ func (p *GuildPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 		} else {
 			fmt.Fprintf(out, "Updating Guild Roster: %s\n", outputName)
 			loadGuildRoster(guild)
+			if _, ok := Roster[getPlayerName(configuration.Everquest.LogPath)]; ok {
+				currentZone = Roster[getPlayerName(configuration.Everquest.LogPath)].Zone
+				fmt.Printf("Changing zone to %s\n", currentZone)
+			}
 		}
 	}
 }

@@ -1157,7 +1157,7 @@ func isDumpOutOfDate(dump string) bool {
 	if err != nil {
 		Err.Printf("Error parsing time of guild dump : %s", err.Error())
 	}
-	fmt.Printf("LogDate: %s Before: %s After: %s Dump: %s Result: %t\n", logDate.String(), time.Now().String(), time.Now().Add(-24*time.Hour).String(), dump, logDate.Before(time.Now()) && logDate.After(time.Now().Add(-24*time.Hour)))
+	// fmt.Printf("LogDate: %s Before: %s After: %s Dump: %s Result: %t\n", logDate.String(), time.Now().String(), time.Now().Add(-24*time.Hour).String(), dump, logDate.Before(time.Now()) && logDate.After(time.Now().Add(-24*time.Hour)))
 	return !(logDate.Before(time.Now()) && logDate.After(time.Now().Add(-24*time.Hour)))
 }
 
