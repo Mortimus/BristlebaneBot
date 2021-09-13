@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -48,9 +49,15 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 		// fmt.Fprintf(out, "TEST: %s\n", msg.Msg)
 		Boss := p.SlayMatch.FindStringSubmatch(msg.Msg)[1]
 		Slayer := p.SlayMatch.FindStringSubmatch(msg.Msg)[2]
-		for _, dkpgiver := range configuration.Everquest.DKPGiver {
-			if !strings.EqualFold(Boss, p.LastBoss) && strings.EqualFold(Boss, dkpgiver) {
-				fmt.Fprintf(out, "%s was slain by %s awarding the raid DKP\n", Boss, Slayer)
+		if !strings.EqualFold(Boss, p.LastBoss) {
+			lowerBoss := strings.ToLower(Boss)
+			if _, ok := bosses[lowerBoss]; ok {
+				if bosses[lowerBoss].IsFTK {
+					fmt.Fprintf(out, "%s was slain by %s awarding the raid %d+%d=%d DKP due to FTK\n", Boss, Slayer, bosses[lowerBoss].DKP, bosses[lowerBoss].FTK, bosses[lowerBoss].DKP+bosses[lowerBoss].FTK)
+				} else {
+					fmt.Fprintf(out, "%s was slain by %s awarding the raid %d DKP\n", Boss, Slayer, bosses[lowerBoss].DKP)
+				}
+
 				p.LastBoss = Boss
 			}
 		}
@@ -106,4 +113,92 @@ func (p *RaidPlugin) Info(out io.Writer) {
 
 func (p *RaidPlugin) OutputChannel() int {
 	return p.Output
+}
+
+type BossDKP struct {
+	Zone  string
+	Note  string
+	Boss  string
+	DKP   int
+	FTK   int
+	IsFTK bool
+}
+
+var bosses map[string]*BossDKP
+
+func seedBosses() {
+	bosses = make(map[string]*BossDKP)
+	spreadsheetID := configuration.Sheets.RawSheetURL
+	readRange := configuration.Sheets.BossesSheetName
+	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, readRange).Do()
+	if err != nil {
+		Err.Printf("Unable to retrieve data from sheet: %v", err)
+		DiscordF(configuration.Discord.InvestigationChannelID, "Unable to read data from the Bosses sheet, cannot determine kills! - %s\n", err)
+		// return errors.New("Unable to retrieve data from sheet: " + err.Error())
+	}
+
+	if len(resp.Values) == 0 {
+		Err.Printf("Cannot read bosses sheet: %v", resp)
+	} else {
+		for i, row := range resp.Values {
+			if i == 1 {
+				continue // skip the header
+			}
+			boss := fmt.Sprintf("%s", row[configuration.Sheets.BossSheetBossCol])
+			i := strings.Index(boss, ":")
+			if i > -1 {
+				boss = boss[i+1:]
+			}
+			boss = strings.TrimSpace(boss)
+			boss = strings.ToLower(boss)
+			if boss != "" {
+				var newBoss BossDKP
+				newBoss.Boss = boss
+
+				zone := fmt.Sprintf("%s", row[configuration.Sheets.BossSheetZoneCol])
+				zone = strings.TrimSpace(zone)
+				newBoss.Zone = zone
+
+				note := fmt.Sprintf("%s", row[configuration.Sheets.BossSheetNoteCol])
+				note = strings.TrimSpace(note)
+				newBoss.Note = note
+
+				dkpString := fmt.Sprintf("%s", row[configuration.Sheets.BossSheetDKPCol])
+				dkpPoints, err := strconv.Atoi(dkpString)
+				if err != nil {
+					Err.Printf("Error converting dkp points to float at row %d: %s", i+1, err.Error())
+					// continue
+					dkpPoints = 0
+				}
+				newBoss.DKP = dkpPoints
+
+				ftkString := fmt.Sprintf("%s", row[configuration.Sheets.BossSheetFTKCol])
+				ftkPoints, err := strconv.Atoi(ftkString)
+				if err != nil {
+					Err.Printf("Error converting ftk points to float at row %d: %s", i+1, err.Error())
+					// continue
+					dkpPoints = 0
+				}
+				newBoss.FTK = ftkPoints
+
+				isFTK := true
+				if len(row) > configuration.Sheets.BossSheetisFTKCol {
+					isFTKString := fmt.Sprintf("%s", row[configuration.Sheets.BossSheetisFTKCol])
+					isFTKString = strings.TrimSpace(isFTKString)
+					if isFTKString == "Yes" {
+						isFTK = false
+					}
+					newBoss.IsFTK = isFTK
+				}
+
+				bosses[boss] = &newBoss
+			}
+		}
+	}
+}
+
+func printBosses() {
+	for _, boss := range bosses {
+		fmt.Printf("%#+v\n", boss)
+	}
 }

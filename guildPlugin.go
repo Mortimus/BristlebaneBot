@@ -43,10 +43,10 @@ func (p *GuildPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			fmt.Printf("Error loading roster dump: %s", err.Error())
 		} else {
 			fmt.Fprintf(out, "Updating Guild Roster: %s\n", outputName)
-			loadGuildRoster(guild)
+			updateGuildRoster(guild) // Fix github issue?
 			if _, ok := Roster[getPlayerName(configuration.Everquest.LogPath)]; ok {
 				currentZone = Roster[getPlayerName(configuration.Everquest.LogPath)].Zone
-				fmt.Printf("Changing zone to %s\n", currentZone)
+				// fmt.Printf("Changing zone to %s\n", currentZone)
 			}
 		}
 	}

@@ -81,6 +81,9 @@ func init() {
 	plug.Version = "1.0.0"
 	plug.Output = BIDOUT
 	plug.BidOpenMatch, _ = regexp.Compile(configuration.Bids.RegexOpenBid)
+	// match1 := `(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`
+	// match2 := "'(.+?)(x\\d)*\\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\\sto\\s.+,?\\s?(?:pst)?\\s(\\d+)(?:min|m)(\\d+)?'"
+	// plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(configuration.Bids.RegexClosedBid)
 	plug.BidAddMatch, _ = regexp.Compile(configuration.Bids.RegexTellBid)
 	plug.Bids = make(map[int]*OpenBid)
@@ -114,6 +117,7 @@ func loadGuildRoster(guild *everquest.Guild) {
 			DKPRank:     getDKPRank(&member),
 		}
 	}
+	fixOutrankingSecondMains()
 	// updateRosterDKP() // We don't need to load dkp when the app starts, only when we need to accept bids
 }
 
@@ -129,7 +133,21 @@ func updateGuildRoster(guild *everquest.Guild) {
 			}
 		}
 	}
+	fixOutrankingSecondMains()
 	// updateRosterDKP()
+}
+
+func fixOutrankingSecondMains() {
+	for _, member := range Roster {
+		if member.DKPRank == SECONDMAIN {
+			main := getMain(&Roster[member.Name].GuildMember)
+			mainRank := &Roster[main].GuildMember
+			if getDKPRank(mainRank) < SECONDMAIN {
+				Roster[member.Name].Rank = Roster[main].Rank
+				Roster[member.Name].PublicNote = ""
+			}
+		}
+	}
 }
 
 func updateRosterDKP() {
@@ -242,7 +260,8 @@ func getDKPRank(member *everquest.GuildMember) DKPRank {
 	if !member.Alt && member.HasRank([]string{"<<< Guild Leader >>>", "<<< Raid/Class Lead/Recruitment >>>", "<<< Officer >>>", "Raider"}) {
 		return MAIN
 	}
-	if (member.Alt && strings.Contains(member.PublicNote, "nd Main") || member.Alt && strings.Contains(member.PublicNote, "nd main")) && member.HasRank([]string{"<<< Guild Leader >>>", "<<< Raid/Class Lead/Recruitment >>>", "<<< Officer >>>", "Raider"}) { // need to check for spelling mistakes
+	if member.Alt && strings.Contains(member.PublicNote, "nd Main") || member.Alt && strings.Contains(member.PublicNote, "nd main") { //&& member.HasRank([]string{"<<< Guild Leader >>>", "<<< Raid/Class Lead/Recruitment >>>", "<<< Officer >>>", "Raider", "Alt"}) { // need to check for spelling mistakes
+		// Check if their main has a lower rank than SECONDMAIN
 		return SECONDMAIN
 	}
 	if member.Rank == "Recruit" {
@@ -299,7 +318,8 @@ func (p *BidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 	if msg.Channel == "guild" && msg.Source == "You" {
 		{ // Check for open bid
 			result := p.BidOpenMatch.FindStringSubmatch(msg.Msg)
-			if len(result) > 0 {
+			p.BidOpenMatch.String()
+			if len(result) > 3 {
 				// result[1] == Item
 				itemName := result[1]
 				// result[2] == count
@@ -308,12 +328,18 @@ func (p *BidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 					count, _ = strconv.Atoi(result[2][1:])
 				}
 				// result[6] == Open timer
-				openTimer := 2
-				if result[5] != "" {
-					openTimer, _ = strconv.Atoi(result[5])
+				openTimerMin := 2
+				if result[3] != "" {
+					openTimerMin, _ = strconv.Atoi(result[3])
 				}
+				openTimerSec := 0
+				if result[4] != "" {
+					openTimerSec, _ = strconv.Atoi(result[4])
+				}
+				// fmt.Printf("Name: %s Count: %d Min: %d Sec: %d\n", itemName, count, openTimerMin, openTimerSec)
 				id, _ := itemDB.FindIDByName(itemName)
-				p.OpenBid(id, count, openTimer, out)
+				// fmt.Printf("OpenID: %d\n", id)
+				p.OpenBid(id, count, openTimerMin, openTimerSec, out)
 			}
 		}
 		{ // Check for closed bid
@@ -368,7 +394,7 @@ func (p *BidPlugin) OutputChannel() int {
 	return p.Output
 }
 
-func (p *BidPlugin) OpenBid(itemID int, quantity int, minutes int, out io.Writer) error {
+func (p *BidPlugin) OpenBid(itemID int, quantity int, minutes int, seconds int, out io.Writer) error {
 	if itemID < 0 {
 		return errors.New("invalid item ID: " + strconv.Itoa(itemID))
 	}
@@ -378,6 +404,10 @@ func (p *BidPlugin) OpenBid(itemID int, quantity int, minutes int, out io.Writer
 	if minutes < 1 {
 		return errors.New("invalid duration: " + strconv.Itoa(minutes))
 	}
+	if seconds < 0 {
+		return errors.New("invalid duration: " + strconv.Itoa(seconds))
+	}
+
 	if _, ok := p.Bids[itemID]; !ok { // Only open bids if item is not already in the map
 		item, _ := itemDB.GetItemByID(itemID)
 		bidders := make([]*Bidder, 0)
@@ -387,21 +417,21 @@ func (p *BidPlugin) OpenBid(itemID int, quantity int, minutes int, out io.Writer
 		p.Bids[itemID] = &OpenBid{
 			Item:                 item,
 			Quantity:             quantity,
-			Duration:             time.Duration(minutes) * time.Minute,
+			Duration:             (time.Duration(minutes) * time.Minute) + (time.Duration(seconds) * time.Second),
 			Start:                time.Now(),
-			End:                  time.Now().Add(time.Duration(minutes) * time.Minute),
+			End:                  time.Now().Add(time.Duration(minutes) * time.Minute).Add(time.Duration(seconds) * time.Second),
 			Bidders:              bidders,
 			Zone:                 currentZone,
 			SecondMainBidsAsMain: configuration.Bids.SecondMainsBidAsMains,
 			SecondMainMaxBid:     configuration.Bids.SecondMainAsMainMaxBid,
 		}
-		p.Bids[itemID].MessageID = DiscordF(configuration.Discord.LootChannelID, "> Bids open on %s (x%d) for %d minutes.\n```%s```%s%d", item.Name, quantity, minutes, getItemDesc(item), configuration.Main.LucyURLPrefix, item.ID)
+		p.Bids[itemID].MessageID = DiscordF(configuration.Discord.LootChannelID, "> Bids open on %s (x%d) for %d minutes %d seconds.\n```%s```%s%d", item.Name, quantity, minutes, seconds, getItemDesc(item), configuration.Main.LucyURLPrefix, item.ID)
 		// fmt.Fprintf(out, "> Bids open on %s (x%d) for %d minutes.\n```%s```%s%d", item.Name, quantity, minutes, getItemDesc(item), configuration.Main.LucyURLPrefix, item.ID)
 		return nil
 	} else {
 		if p.Bids[itemID].Quantity != quantity { // Modify amount of winners
 			// fmt.Fprintf(out, "Changing %s bid quantity to %d", p.Bids[itemID].Item.Name, quantity)
-			header := fmt.Sprintf("> Bids open on %s (x%d) for %d minutes.", p.Bids[itemID].Item.Name, quantity, minutes)
+			header := fmt.Sprintf("> Bids open on %s (x%d) for %d minutes %d seconds.", p.Bids[itemID].Item.Name, quantity, minutes, seconds)
 			err := updateHeader(configuration.Discord.LootChannelID, p.Bids[itemID].MessageID, header)
 			if err != nil {
 				Err.Println(err)
@@ -426,7 +456,7 @@ func (b *OpenBid) AddBid(player DKPHolder, amount int, msg everquest.EqLog) {
 			Message:      msg,
 		}
 		if !canEquip(b.Item, player.GuildMember) {
-			DiscordF(configuration.Discord.InvestigationChannelID, "A player bid on %s that cannot use it, if it is not cancelled it will be auto investigated. [%s]\n", b.Item.Name, b.Item.GetClasses())
+			DiscordF(configuration.Discord.InvestigationChannelID, "```diff\n-A player bid on %s that cannot use it, if it is not cancelled it will be auto investigated. %s\n```", b.Item.Name, b.Item.GetClasses())
 		}
 		// fmt.Printf("Bidder: %#+v\n", bidder)
 		b.Bidders = append(b.Bidders, bidder)
@@ -466,8 +496,18 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 			Err.Println(err)
 		}
 	}
+
 	// Find winning cost
 	b.WinningBid = b.FindWinningBid()
+	// if tieCount > 0 { // Adjust dkp if it was a tie, we don't add dkp to a tied bid
+	// 	b.WinningBid -= 5
+	// 	if b.WinningBid > 0 && b.WinningBid < configuration.Bids.MinimumBid {
+	// 		b.WinningBid = configuration.Bids.MinimumBid
+	// 	}
+	// }
+	if b.WinningBid < 0 {
+		b.WinningBid = 0
+	}
 	// Announce winner and include rot if needed
 	winners := b.GetWinnerNames()
 	if len(winners) < b.Quantity {
@@ -491,6 +531,18 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 		}
 	}
 	b.GenerateInvestigation()
+	// TEST CODE ONLY
+	// if b.WinningBid == 0 && winners[0] != "Rot" {
+	// 	fmt.Printf("Somehow we have a 0 dkp win again :( -> %s", b.MessageID)
+	// 	uploadArchive(b.MessageID)
+	// 	os.Exit(1)
+	// }
+	// if b.WinningBid > 0 && winners[0] == "Rot" {
+	// 	fmt.Printf("Rot won with dkp somehow :( -> %s", b.MessageID)
+	// 	uploadArchive(b.MessageID)
+	// 	os.Exit(1)
+	// }
+	// END TEST CODE
 	winnerMessage := "```"
 
 	var playerWon bool
@@ -499,7 +551,7 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 			winnerMessage = fmt.Sprintf("%s%d: %s\n", winnerMessage, i+1, win)
 		} else {
 			playerWon = true
-			winnerMessage = fmt.Sprintf("%s%d: %s\t%d - %d = %d DKP\n", winnerMessage, i+1, win, Roster[win].DKP, b.WinningBid, Roster[win].DKP-b.WinningBid)
+			winnerMessage = fmt.Sprintf("%s%d: %s\tCurrentDKP(%d) - WinningBid(%d) = %d DKP\n", winnerMessage, i+1, win, Roster[win].DKP, b.WinningBid, Roster[win].DKP-b.WinningBid)
 		}
 
 	}
@@ -516,9 +568,11 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 	if err != nil {
 		Err.Println(err)
 	}
-	err = discord.MessageReactionAdd(configuration.Discord.LootChannelID, b.MessageID, configuration.Discord.InvestigationStartEmoji)
-	if err != nil {
-		Err.Printf("Error adding base reaction: %s", err.Error())
+	if configuration.Discord.UseDiscord {
+		err = discord.MessageReactionAdd(configuration.Discord.LootChannelID, b.MessageID, configuration.Discord.InvestigationStartEmoji)
+		if err != nil {
+			Err.Printf("Error adding base reaction: %s", err.Error())
+		}
 	}
 	if b.AutoInvestigate() {
 		uploadArchive(b.MessageID)
@@ -529,6 +583,9 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 }
 
 func updateMessage(channelID, messageID, append string) error {
+	if !configuration.Discord.UseDiscord {
+		return nil
+	}
 	msg, err := discord.ChannelMessage(channelID, messageID)
 	if err != nil {
 		return err
@@ -543,6 +600,9 @@ func updateMessage(channelID, messageID, append string) error {
 }
 
 func updateHeader(channelID, messageID, header string) error {
+	if !configuration.Discord.UseDiscord {
+		return nil
+	}
 	msg, err := discord.ChannelMessage(channelID, messageID)
 	if err != nil {
 		return err
@@ -675,6 +735,14 @@ func (b *OpenBid) AutoInvestigate() bool {
 			return true
 		}
 	}
+	if b.WinningBid == 0 && len(b.GetWinnerNames()) != 0 {
+		DiscordF(configuration.Discord.InvestigationChannelID, "```diff\n-Somehow we have a 0 dkp win again auto investigating\n```")
+		return true
+	}
+	if b.WinningBid > 0 && len(b.GetWinnerNames()) == 0 {
+		DiscordF(configuration.Discord.InvestigationChannelID, "```diff\n-Somehow we have a Rot spending DKP auto investigating\n```")
+		return true
+	}
 	return false
 }
 
@@ -751,34 +819,174 @@ func canEquip(item everquest.Item, player everquest.GuildMember) bool { // TODO:
 	return false
 }
 
+// func (b *OpenBid) FindWinningBid_OLD() int {
+// 	const DEBUG = true
+// 	if DEBUG {
+// 		fmt.Printf("configuration.Bids.MinimumBid: %d\n", configuration.Bids.MinimumBid)
+// 	}
+// 	var winningBid int
+// 	var winners int
+// 	var winRank DKPRank
+// 	for i, bidder := range b.Bidders {
+// 		if len(b.Bidders) == 1 && bidder.Bid >= configuration.Bids.MinimumBid { // only 1 winner, wins for minimum bid
+// 			return configuration.Bids.MinimumBid
+// 		}
+// 		if i < b.Quantity {
+// 			if DEBUG {
+// 				fmt.Printf("GetTopRankBid: %d winningBid: %d\n", bidder.Bid, winningBid)
+// 			}
+
+// 			winRank = GetEffectiveDKPRank(bidder.Player.DKPRank)
+// 			winningBid = configuration.Bids.MinimumBid
+// 			continue
+// 		}
+// 		if bidder.Bid > winningBid {
+// 			if DEBUG {
+// 				fmt.Printf("Bid: %d winningBid: %d\n", bidder.Bid, winningBid)
+// 			}
+
+// 			// winningBid = bidder.Bid
+// 			if bidder.Bid < b.Bidders[i-1].Bid {
+// 				winningBid = bidder.Bid + 5
+// 				// if len(b.Bidders) > i+1 && bidder.Bid == b.Bidders[i+1].Bid {
+// 				// 	winningBid = bidder.Bid
+// 				// }
+// 			} else {
+// 				winningBid = bidder.Bid
+// 			}
+// 		}
+// 		if DEBUG {
+// 			fmt.Printf("POST::Bid: %d winningBid: %d\n", bidder.Bid, winningBid)
+// 		}
+
+// 		// if bidder.Bid >= configuration.Bids.MinimumBid {
+// 		// 	// fmt.Printf("Len: %d i: %d\n", len(b.Bidders), i)
+// 		// 	if len(b.Bidders) > i+1 && b.Bidders[i+1].Bid >= configuration.Bids.MinimumBid && winRank == GetEffectiveDKPRank(b.Bidders[i+1].Player.DKPRank) {
+// 		// 		winningBid = bidder.Bid + 5
+// 		// 	} else {
+// 		// 		winningBid = bidder.Bid
+// 		// 	}
+// 		// }
+// 		winners++
+// 		if winners >= b.Quantity {
+// 			if DEBUG {
+// 				fmt.Printf("Quantity::winningBid: %d\n", winningBid)
+// 			}
+
+// 			if b.Bidders[i-1].Bid == bidder.Bid || (len(b.Bidders) > i+1 && b.Bidders[i+1].Bid == bidder.Bid && winRank == GetEffectiveDKPRank(b.Bidders[i+1].Player.DKPRank)) {
+// 				if DEBUG {
+// 					fmt.Printf("Quantity2::winningBid: %d\n", winningBid)
+// 				}
+// 				winningBid = bidder.Bid
+// 			} else {
+// 				if DEBUG {
+// 					fmt.Printf("Quantity3::winningBid: %d\n", winningBid)
+// 				}
+// 				if GetEffectiveDKPRank(bidder.Player.DKPRank) != winRank {
+// 					if DEBUG {
+// 						fmt.Printf("Quantity4::winningBid: %d\n", winningBid)
+// 					}
+// 					return configuration.Bids.MinimumBid
+// 				}
+// 				if bidder.Bid == 0 {
+// 					if DEBUG {
+// 						fmt.Printf("Quantity5::winningBid: %d\n", winningBid)
+// 					}
+// 					return configuration.Bids.MinimumBid
+// 				} else {
+// 					if DEBUG {
+// 						fmt.Printf("Quantity6::winningBid: %d\n", winningBid)
+// 					}
+// 					winningBid = b.Bidders[i-1].Bid + 5
+// 				}
+// 				if winningBid == 5 {
+// 					if DEBUG {
+// 						fmt.Printf("Quantity7::winningBid: %d\n", winningBid)
+// 					}
+// 					winningBid = configuration.Bids.MinimumBid
+// 				}
+// 			}
+// 			break
+// 		}
+// 		if GetEffectiveDKPRank(bidder.Player.DKPRank) != winRank { // Lower ranks can't upbid higher ranks
+// 			if DEBUG {
+// 				fmt.Printf("Rank::winningBid: %d\n", winningBid)
+// 			}
+
+// 			return configuration.Bids.MinimumBid
+// 		}
+
+// 		if winningBid == 0 && len(b.Bidders) == i+1 {
+// 			if DEBUG {
+// 				fmt.Printf("Rot::winningBid: %d\n", winningBid)
+// 			}
+
+// 			if i > 0 && bidder.Bid == 0 && b.Bidders[i-1].Bid >= configuration.Bids.MinimumBid {
+// 				return configuration.Bids.MinimumBid
+// 			} else {
+// 				return 0 // no winner, Rot wins
+// 			}
+// 		}
+// 		// This is weird
+// 		if len(b.Bidders) == i+1 && winners < b.Quantity { // we are on the last bidder and still have items to hand out, lowest possible bid won
+// 			if DEBUG {
+// 				fmt.Printf("LEN::winningBid: %d\n", winningBid)
+// 			}
+
+// 			return configuration.Bids.MinimumBid
+// 		}
+// 		// if bidder.Bid < winningBid {
+// 		// 	winningBid = bidder.Bid + 5
+// 		// 	break
+// 		// }
+// 	}
+// 	if DEBUG {
+// 		fmt.Printf("RETURN::winningBid: %d\n", winningBid)
+// 	}
+
+// 	return winningBid
+// }
+
 func (b *OpenBid) FindWinningBid() int {
-	var winningBid int
-	var winners int
+	const DEBUG = false
+	winningBid := configuration.Bids.MinimumBid
 	var winRank DKPRank
+	if len(b.Bidders) == 0 {
+		return 0 // no one bid, rot
+	}
+	var winners int
+	var lastbid int
 	for i, bidder := range b.Bidders {
-		if i == 0 {
+		if DEBUG {
+			fmt.Printf("winningBid: %d winRank: %d winners: %d lastbid: %d bid: %d name: %s rank: %d i: %d\n", winningBid, winRank, winners, lastbid, bidder.Bid, bidder.Player.Name, bidder.Player.DKPRank, i)
+		}
+		if i == 0 && bidder.Bid == 0 {
+			return 0 // ROT
+		}
+		if bidder.Bid == 0 {
+			continue
+		}
+		winners++ // We don't want to include cancelled bids in winningbid calculations
+		if GetEffectiveDKPRank(bidder.Player.DKPRank) > winRank || winners <= b.Quantity {
 			winRank = GetEffectiveDKPRank(bidder.Player.DKPRank)
-		}
-		if bidder.Bid > 0 {
-			winningBid = bidder.Bid
-		}
-		winners++
-		if winners > b.Quantity {
+			lastbid = bidder.Bid
+		} else {
+			if bidder.Bid == lastbid {
+				winningBid = bidder.Bid // Tie
+			} else {
+				winningBid = bidder.Bid + 5
+			}
+			if GetEffectiveDKPRank(bidder.Player.DKPRank) != winRank {
+				winningBid = configuration.Bids.MinimumBid
+			}
 			break
 		}
-		if GetEffectiveDKPRank(bidder.Player.DKPRank) != winRank { // Lower ranks can't upbid higher ranks
-			return configuration.Bids.MinimumBid
-		}
-		if winningBid == 0 && len(b.Bidders) == i+1 {
-			return 0 // no winner, Rot wins
-		}
-		if len(b.Bidders) == i+1 { // we are on the last bidder and still have items to hand out, lowest possible bid won
-			return configuration.Bids.MinimumBid
-		}
+	}
+	if DEBUG {
+		fmt.Printf("winningBid: %d winRank: %d winners: %d lastbid: %d\n", winningBid, winRank, winners, lastbid)
 	}
 	return winningBid
 }
-
 func (b *OpenBid) CheckTiesAndApplyWinners() map[string]interface{} { // We are assuming bids are applied and sorted before this is called
 	tiedPlayers := make(map[string]interface{})
 	if len(b.Bidders) <= b.Quantity {

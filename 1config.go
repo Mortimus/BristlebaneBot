@@ -121,6 +121,13 @@ type Sheets struct {
 	RawSheetDateCol          int    `comment:"Raw DKP/Attendance sheet sheet column for date"`
 	RawSheetDKPCol           int    `comment:"Raw DKP/Attendance sheet sheet column for dkp"`
 	RawSheetAttendanceCol    int    `comment:"Raw DKP/Attendance sheet sheet column for attendance"`
+	BossesSheetName          string `comment:"Bossses sheet sheet name"`
+	BossSheetZoneCol         int    `comment:"Boss sheet column for zone name"`
+	BossSheetNoteCol         int    `comment:"Boss sheet column for zone name"`
+	BossSheetBossCol         int    `comment:"Boss sheet column for zone name"`
+	BossSheetDKPCol          int    `comment:"Boss sheet column for zone name"`
+	BossSheetFTKCol          int    `comment:"Boss sheet column for zone name"`
+	BossSheetisFTKCol        int    `comment:"Boss sheet column for zone name"`
 }
 
 type Log struct {

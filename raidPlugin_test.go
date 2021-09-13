@@ -27,11 +27,13 @@ func TestRaidStart(t *testing.T) {
 	}
 }
 
-func TestRaidBossKill(t *testing.T) {
+func TestRaidBossKillGithub43(t *testing.T) {
 	ldplug := new(RaidPlugin)
 	msg := new(everquest.EqLog)
 	msg.Channel = "system"
-	msg.Msg = "Kraksmaal Fir'Dethsin has been slain by Mortimus!'"
+	// &main.BossDKP{Zone:"Takish-Hiz: Fading Temple", Note:"LDoN", Boss:"Quintessence Of Sand", DKP:30, FTK:10, IsFTK:false}
+	//   LDoN: Quintessence of Sand
+	msg.Msg = "Quintessence of Sand has been slain by Mortimus!"
 	msg.Source = "Mortimus"
 	msg.T = time.Date(2021, time.April, 17, 20, 59, 52, 0, time.Local)
 	ldplug.Output = TESTOUT // anything but raid dump channel
@@ -42,7 +44,28 @@ func TestRaidBossKill(t *testing.T) {
 	var b bytes.Buffer
 	ldplug.Handle(msg, &b)
 	got := b.String()
-	want := "Kraksmaal Fir'Dethsin was slain by Mortimus awarding the raid DKP\n"
+	want := "Quintessence of Sand was slain by Mortimus awarding the raid 30 DKP\n"
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
+	}
+}
+
+func TestRaidBossKill(t *testing.T) {
+	ldplug := new(RaidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "system"
+	msg.Msg = "Kraksmaal Fir`Dethsin has been slain by Mortimus!"
+	msg.Source = "Mortimus"
+	msg.T = time.Date(2021, time.April, 17, 20, 59, 52, 0, time.Local)
+	ldplug.Output = TESTOUT // anything but raid dump channel
+	ldplug.NeedsDump = false
+	ldplug.NextDump = msg.T.Add(time.Hour * 5)
+	ldplug.SlayMatch, _ = regexp.Compile(`(.+) has been slain by (\w+)!`)
+	ldplug.Started = true
+	var b bytes.Buffer
+	ldplug.Handle(msg, &b)
+	got := b.String()
+	want := "Kraksmaal Fir`Dethsin was slain by Mortimus awarding the raid 10 DKP\n"
 	if got != want {
 		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
 	}

@@ -114,6 +114,7 @@ func init() {
 	if err != nil {
 		Err.Fatalf("Unable retrieve Sheets client: %v", err)
 	}
+	seedBosses()
 }
 
 func main() {

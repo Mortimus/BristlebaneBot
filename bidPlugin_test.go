@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"math/rand"
 	"regexp"
 	"testing"
@@ -10,6 +11,10 @@ import (
 
 	everquest "github.com/Mortimus/goEverquest"
 )
+
+func init() {
+	configuration.Discord.UseDiscord = false
+}
 
 func TestBidOpen(t *testing.T) {
 	plug := new(BidPlugin)
@@ -19,14 +24,58 @@ func TestBidOpen(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
-	got := b.String()
-	want := "> Bids open on Cloth Cap (x1) for 2 minutes.\n```Cloth Cap\nMAGIC LORE NO TRADE \nSlot: NONE \n\nEffect: Veeshan's Swarm \nWT: 0.5 Size: SMALL\nClass: ALL \nRace: ALL ```https://eq.magelo.com/item/42984"
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	// fmt.Printf("ID: %d\n", id)
+	got := plug.Bids[id].Quantity
+	want := 1
 	if got != want {
 		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
+	}
+}
+
+func TestBidTimeWithSeconds(t *testing.T) {
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Gloves of the Unseen bids to Mortimus, pst 2min30s"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	id, _ := itemDB.FindIDByName("Gloves of the Unseen")
+	// fmt.Printf("ID: %d\n", id)
+	got := plug.Bids[id].Duration.Seconds()
+	want := 150.0
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %f, want %f", got, want)
+	}
+}
+
+func TestBidTimeWithoutSeconds(t *testing.T) {
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Cloth Cap bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	// fmt.Printf("ID: %d\n", id)
+	got := plug.Bids[id].Duration.Seconds()
+	want := 120.0
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %f, want %f", got, want)
 	}
 }
 
@@ -39,7 +88,7 @@ func TestBidChangeQuantity(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -67,7 +116,7 @@ func TestBidClose(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
 	item, _ := itemDB.GetItemByID(id)
@@ -81,10 +130,14 @@ func TestBidClose(t *testing.T) {
 	}
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
-	got := b.String()
-	want := "> Cloth Cap (x1) won for 0 DKP\n```1: Rot\n```[b1c9e6fb16cd0d49734d45ec331b5e008049e734ebe90a61284b835d39e19414]> Closed bids on Cloth Cap (x1)\n"
+	var bidClosed bool
+	if _, ok := plug.Bids[id]; !ok {
+		bidClosed = true
+	}
+	got := bidClosed
+	want := true
 	if got != want {
-		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
+		t.Errorf("ldplug.Handle(msg, &t) = %t, want %t", got, want)
 	}
 }
 
@@ -136,6 +189,82 @@ func TestGetDKPRankOfficerSecondMain(t *testing.T) {
 	}
 }
 
+func TestGuildHotReload(t *testing.T) {
+	guild := new(everquest.Guild)
+	guild.LoadFromPath(configuration.Everquest.BaseFolder+"/"+"Vets of Norrath_aradune-20210911-205830.txt", Err)
+	updateGuildRoster(guild)
+	got := getDKPRank(&Roster["Struummin"].GuildMember)
+	want := DKPRank(SECONDMAIN)
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", DKPRankToString(got), DKPRankToString(want))
+	}
+}
+
+func TestGetDKPRankAltSecondMain(t *testing.T) {
+	member := &everquest.GuildMember{
+		Rank:       "Alt",
+		Alt:        true,
+		PublicNote: "Ruperts' 2nd main",
+	}
+	got := getDKPRank(member)
+	want := DKPRank(SECONDMAIN)
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", DKPRankToString(got), DKPRankToString(want))
+	}
+}
+
+func TestGetDKPRankSecondMainHigherRankThanMain(t *testing.T) { // TODO: Fix this with fake members
+	member := everquest.GuildMember{
+		Name:       "Fakesecond",
+		Rank:       "Alt",
+		Alt:        true,
+		PublicNote: "Fakemain 2nd main",
+	}
+	memberMain := everquest.GuildMember{
+		Name: "Fakemain",
+		Rank: "Recruit",
+		Alt:  true,
+	}
+	Roster["Fakemain"] = &DKPHolder{
+		GuildMember: memberMain,
+		DKPRank:     getDKPRank(&memberMain),
+	}
+	Roster["Fakesecond"] = &DKPHolder{
+		GuildMember: member,
+		DKPRank:     getDKPRank(&member),
+	}
+	fixOutrankingSecondMains()
+	// Roster["Blepper"].Rank = "Recruit"
+	got := getDKPRank(&Roster["Fakesecond"].GuildMember)
+	want := DKPRank(RECRUIT)
+	if got != want {
+		t.Errorf("Got %q, want %q", DKPRankToString(got), DKPRankToString(want))
+	}
+	got2 := getDKPRank(&Roster["Fakemain"].GuildMember)
+	want2 := DKPRank(RECRUIT)
+	if got != want {
+		t.Errorf("Got %q, want %q", DKPRankToString(got2), DKPRankToString(want2))
+	}
+	got3 := getDKPRank(&Roster["Fakesecond"].GuildMember)
+	want3 := getDKPRank(&Roster["Fakemain"].GuildMember)
+	if got != want {
+		t.Errorf("Got %q, want %q", DKPRankToString(got3), DKPRankToString(want3))
+	}
+}
+
+func TestGetDKPRankSecondMainNoApostraphe(t *testing.T) {
+	member := &everquest.GuildMember{
+		Rank:       "<<< Officer >>>",
+		Alt:        true,
+		PublicNote: "Mortimus 2nd main",
+	}
+	got := getDKPRank(member)
+	want := DKPRank(SECONDMAIN)
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", DKPRankToString(got), DKPRankToString(want))
+	}
+}
+
 func TestGetDKPRankRecruit(t *testing.T) {
 	member := &everquest.GuildMember{
 		Rank: "Recruit",
@@ -178,7 +307,7 @@ func TestBidAdd(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -209,7 +338,7 @@ func TestBidAddAmount(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -242,7 +371,7 @@ func TestBidApply(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -255,7 +384,9 @@ func TestBidApply(t *testing.T) {
 	plug.Handle(add, &b)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
 	got := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[got].Player.DKP = 2000
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	// plug.Bids[id].Bidders[got].Player.DKP = 2000
 	plug.Bids[id].ApplyDKP()
 	appliedBid := plug.Bids[id].Bidders[got].Bid
 	want := 500
@@ -272,7 +403,7 @@ func TestBidApplyTooMuch(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -285,7 +416,8 @@ func TestBidApplyTooMuch(t *testing.T) {
 	plug.Handle(add, &b)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
 	got := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[got].Player.DKP = 2000
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	appliedBid := plug.Bids[id].Bidders[got].Bid
 	want := 2000
@@ -303,7 +435,7 @@ func TestBidApplyBelowMin(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -316,7 +448,8 @@ func TestBidApplyBelowMin(t *testing.T) {
 	plug.Handle(add, &b)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
 	got := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[got].Player.DKP = 2000
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	appliedBid := plug.Bids[id].Bidders[got].Bid
 	want := configuration.Bids.MinimumBid
@@ -334,7 +467,7 @@ func TestBidApplyNoIncrement(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -347,7 +480,8 @@ func TestBidApplyNoIncrement(t *testing.T) {
 	plug.Handle(add, &b)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
 	got := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[got].Player.DKP = 2000
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	appliedBid := plug.Bids[id].Bidders[got].Bid
 	want := configuration.Bids.MinimumBid
@@ -364,7 +498,7 @@ func TestBidApplyCancelledBid(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -377,7 +511,8 @@ func TestBidApplyCancelledBid(t *testing.T) {
 	plug.Handle(add, &b)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
 	got := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[got].Player.DKP = 2000
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	appliedBid := plug.Bids[id].Bidders[got].Bid
 	want := 0
@@ -396,7 +531,7 @@ func TestBidApplyNerfedSecondMain(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -415,12 +550,12 @@ func TestBidApplyNerfedSecondMain(t *testing.T) {
 	plug.Handle(secondadd, &b)
 	//----------------
 	id, _ := itemDB.FindIDByName("Cloth Cap")
-	maingot := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[maingot].Player.DKP = 2000
-	plug.Bids[id].Bidders[maingot].Player.DKPRank = MAIN
+	// maingot := plug.Bids[id].FindBid("Mortimus")
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	Roster["Milliardo"].DKP = 2000
+	Roster["Mortimus"].DKPRank = SECONDMAIN
 	secondgot := plug.Bids[id].FindBid("Milliardo")
-	plug.Bids[id].Bidders[secondgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[secondgot].Player.DKPRank = SECONDMAIN
 	plug.Bids[id].ApplyDKP()
 	appliedBid := plug.Bids[id].Bidders[secondgot].Bid
 	want := configuration.Bids.SecondMainAsMainMaxBid
@@ -430,6 +565,10 @@ func TestBidApplyNerfedSecondMain(t *testing.T) {
 }
 
 func TestTiesSameRank(t *testing.T) {
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	Roster["Penelo"].DKP = 2000
+	Roster["Penelo"].DKPRank = MAIN
 	configuration.Bids.SecondMainsBidAsMains = true
 	configuration.Bids.SecondMainAsMainMaxBid = 200
 	plug := new(BidPlugin)
@@ -439,7 +578,7 @@ func TestTiesSameRank(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -453,17 +592,11 @@ func TestTiesSameRank(t *testing.T) {
 	secondadd := new(everquest.EqLog)
 	secondadd.Channel = "tell"
 	secondadd.Msg = "Cloth Cap 300"
-	secondadd.Source = "Milliardo"
+	secondadd.Source = "Penelo"
 	secondadd.T = time.Now()
 	plug.Handle(secondadd, &b)
 	//----------------
 	id, _ := itemDB.FindIDByName("Cloth Cap")
-	maingot := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[maingot].Player.DKP = 2000
-	plug.Bids[id].Bidders[maingot].Player.DKPRank = MAIN
-	secondgot := plug.Bids[id].FindBid("Milliardo")
-	plug.Bids[id].Bidders[secondgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[secondgot].Player.DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	plug.Bids[id].SortBids()
 	ties := plug.Bids[id].CheckTiesAndApplyWinners()
@@ -484,7 +617,7 @@ func TestTiesSameRankMulti(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -538,7 +671,7 @@ func TestTiesSecondAndThirdTie(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -552,7 +685,7 @@ func TestTiesSecondAndThirdTie(t *testing.T) {
 	secondadd := new(everquest.EqLog)
 	secondadd.Channel = "tell"
 	secondadd.Msg = "Cloth Cap 300"
-	secondadd.Source = "Milliardo"
+	secondadd.Source = "Zortax"
 	secondadd.T = time.Now()
 	plug.Handle(secondadd, &b)
 	thirdadd := new(everquest.EqLog)
@@ -563,15 +696,12 @@ func TestTiesSecondAndThirdTie(t *testing.T) {
 	plug.Handle(thirdadd, &b)
 	//----------------
 	id, _ := itemDB.FindIDByName("Cloth Cap")
-	maingot := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[maingot].Player.DKP = 2000
-	plug.Bids[id].Bidders[maingot].Player.DKPRank = MAIN
-	secondgot := plug.Bids[id].FindBid("Milliardo")
-	plug.Bids[id].Bidders[secondgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[secondgot].Player.DKPRank = MAIN
-	thirdgot := plug.Bids[id].FindBid("Penelo")
-	plug.Bids[id].Bidders[thirdgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[thirdgot].Player.DKPRank = MAIN
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	Roster["Zortax"].DKP = 2000
+	Roster["Zortax"].DKPRank = MAIN
+	Roster["Penelo"].DKP = 2000
+	Roster["Penelo"].DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	plug.Bids[id].SortBids()
 	ties := plug.Bids[id].CheckTiesAndApplyWinners()
@@ -592,7 +722,7 @@ func TestTiesCancelledTies(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -606,7 +736,7 @@ func TestTiesCancelledTies(t *testing.T) {
 	secondadd := new(everquest.EqLog)
 	secondadd.Channel = "tell"
 	secondadd.Msg = "Cloth Cap 0"
-	secondadd.Source = "Milliardo"
+	secondadd.Source = "Zortax"
 	secondadd.T = time.Now()
 	plug.Handle(secondadd, &b)
 	thirdadd := new(everquest.EqLog)
@@ -617,15 +747,12 @@ func TestTiesCancelledTies(t *testing.T) {
 	plug.Handle(thirdadd, &b)
 	//----------------
 	id, _ := itemDB.FindIDByName("Cloth Cap")
-	maingot := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[maingot].Player.DKP = 2000
-	plug.Bids[id].Bidders[maingot].Player.DKPRank = MAIN
-	secondgot := plug.Bids[id].FindBid("Milliardo")
-	plug.Bids[id].Bidders[secondgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[secondgot].Player.DKPRank = MAIN
-	thirdgot := plug.Bids[id].FindBid("Penelo")
-	plug.Bids[id].Bidders[thirdgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[thirdgot].Player.DKPRank = MAIN
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	Roster["Zortax"].DKP = 2000
+	Roster["Zortax"].DKPRank = MAIN
+	Roster["Penelo"].DKP = 2000
+	Roster["Penelo"].DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	plug.Bids[id].SortBids()
 	ties := plug.Bids[id].CheckTiesAndApplyWinners()
@@ -646,7 +773,7 @@ func TestTiesDiffRank(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -660,7 +787,7 @@ func TestTiesDiffRank(t *testing.T) {
 	secondadd := new(everquest.EqLog)
 	secondadd.Channel = "tell"
 	secondadd.Msg = "Cloth Cap 100"
-	secondadd.Source = "Milliardo"
+	secondadd.Source = "Rokem"
 	secondadd.T = time.Now()
 	plug.Handle(secondadd, &b)
 	thirdadd := new(everquest.EqLog)
@@ -671,15 +798,12 @@ func TestTiesDiffRank(t *testing.T) {
 	plug.Handle(thirdadd, &b)
 	//----------------
 	id, _ := itemDB.FindIDByName("Cloth Cap")
-	maingot := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[maingot].Player.DKP = 2000
-	plug.Bids[id].Bidders[maingot].Player.DKPRank = MAIN
-	secondgot := plug.Bids[id].FindBid("Milliardo")
-	plug.Bids[id].Bidders[secondgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[secondgot].Player.DKPRank = ALT
-	thirdgot := plug.Bids[id].FindBid("Penelo")
-	plug.Bids[id].Bidders[thirdgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[thirdgot].Player.DKPRank = MAIN
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	Roster["Rokem"].DKP = 2000
+	Roster["Rokem"].DKPRank = ALT
+	Roster["Penelo"].DKP = 2000
+	Roster["Penelo"].DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	plug.Bids[id].SortBids()
 	ties := plug.Bids[id].CheckTiesAndApplyWinners()
@@ -700,7 +824,7 @@ func TestTiesDiffRankCancelledBidSecondMain(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -725,15 +849,12 @@ func TestTiesDiffRankCancelledBidSecondMain(t *testing.T) {
 	plug.Handle(thirdadd, &b)
 	//----------------
 	id, _ := itemDB.FindIDByName("Cloth Cap")
-	maingot := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[maingot].Player.DKP = 2000
-	plug.Bids[id].Bidders[maingot].Player.DKPRank = MAIN
-	secondgot := plug.Bids[id].FindBid("Milliardo")
-	plug.Bids[id].Bidders[secondgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[secondgot].Player.DKPRank = SECONDMAIN
-	thirdgot := plug.Bids[id].FindBid("Penelo")
-	plug.Bids[id].Bidders[thirdgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[thirdgot].Player.DKPRank = MAIN
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	Roster["Milliardo"].DKP = 2000
+	Roster["Milliardo"].DKPRank = SECONDMAIN
+	Roster["Penelo"].DKP = 2000
+	Roster["Penelo"].DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	plug.Bids[id].SortBids()
 	ties := plug.Bids[id].CheckTiesAndApplyWinners()
@@ -754,7 +875,7 @@ func TestTiesDiffRankCancelledBid(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -768,26 +889,23 @@ func TestTiesDiffRankCancelledBid(t *testing.T) {
 	secondadd := new(everquest.EqLog)
 	secondadd.Channel = "tell"
 	secondadd.Msg = "Cloth Cap 100"
-	secondadd.Source = "Milliardo"
+	secondadd.Source = "Rokem"
 	secondadd.T = time.Now()
 	plug.Handle(secondadd, &b)
 	thirdadd := new(everquest.EqLog)
 	thirdadd.Channel = "tell"
 	thirdadd.Msg = "Cloth Cap 100"
-	thirdadd.Source = "Penelo"
+	thirdadd.Source = "Glavin"
 	thirdadd.T = time.Now()
 	plug.Handle(thirdadd, &b)
 	//----------------
 	id, _ := itemDB.FindIDByName("Cloth Cap")
-	maingot := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[maingot].Player.DKP = 2000
-	plug.Bids[id].Bidders[maingot].Player.DKPRank = MAIN
-	secondgot := plug.Bids[id].FindBid("Milliardo")
-	plug.Bids[id].Bidders[secondgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[secondgot].Player.DKPRank = ALT
-	thirdgot := plug.Bids[id].FindBid("Penelo")
-	plug.Bids[id].Bidders[thirdgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[thirdgot].Player.DKPRank = ALT
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	Roster["Rokem"].DKP = 2000
+	Roster["Rokem"].DKPRank = ALT
+	Roster["Glavin"].DKP = 2000
+	Roster["Glavin"].DKPRank = ALT
 	plug.Bids[id].ApplyDKP()
 	plug.Bids[id].SortBids()
 	ties := plug.Bids[id].CheckTiesAndApplyWinners()
@@ -808,7 +926,7 @@ func TestTiesMoreItemsThanTies(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -822,7 +940,7 @@ func TestTiesMoreItemsThanTies(t *testing.T) {
 	secondadd := new(everquest.EqLog)
 	secondadd.Channel = "tell"
 	secondadd.Msg = "Cloth Cap 100"
-	secondadd.Source = "Milliardo"
+	secondadd.Source = "Zortax"
 	secondadd.T = time.Now()
 	plug.Handle(secondadd, &b)
 	thirdadd := new(everquest.EqLog)
@@ -833,15 +951,12 @@ func TestTiesMoreItemsThanTies(t *testing.T) {
 	plug.Handle(thirdadd, &b)
 	//----------------
 	id, _ := itemDB.FindIDByName("Cloth Cap")
-	maingot := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[maingot].Player.DKP = 2000
-	plug.Bids[id].Bidders[maingot].Player.DKPRank = MAIN
-	secondgot := plug.Bids[id].FindBid("Milliardo")
-	plug.Bids[id].Bidders[secondgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[secondgot].Player.DKPRank = MAIN
-	thirdgot := plug.Bids[id].FindBid("Penelo")
-	plug.Bids[id].Bidders[thirdgot].Player.DKP = 2000
-	plug.Bids[id].Bidders[thirdgot].Player.DKPRank = MAIN
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	Roster["Zortax"].DKP = 2000
+	Roster["Zortax"].DKPRank = MAIN
+	Roster["Penelo"].DKP = 2000
+	Roster["Penelo"].DKPRank = MAIN
 	plug.Bids[id].ApplyDKP()
 	plug.Bids[id].SortBids()
 	ties := plug.Bids[id].CheckTiesAndApplyWinners()
@@ -853,6 +968,8 @@ func TestTiesMoreItemsThanTies(t *testing.T) {
 }
 
 func TestBidApplyNoDKP(t *testing.T) {
+	mem := everquest.GuildMember{Name: "NotReal", Class: "Warrior", Level: 1, Rank: "Raider"}
+	Roster["NotReal"] = &DKPHolder{DKP: 0, DKPRank: MAIN, GuildMember: mem}
 	plug := new(BidPlugin)
 	msg := new(everquest.EqLog)
 	msg.Channel = "guild"
@@ -860,7 +977,7 @@ func TestBidApplyNoDKP(t *testing.T) {
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
-	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Tt][Ee][Ll][Ll][Ss])?([Bb][Ii][Dd][Ss])?\sto\s.+,?.+(\d+).*`)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
 	var b bytes.Buffer
@@ -868,16 +985,527 @@ func TestBidApplyNoDKP(t *testing.T) {
 	add := new(everquest.EqLog)
 	add.Channel = "tell"
 	add.Msg = "Cloth Cap 100"
-	add.Source = "Mortimus"
+	add.Source = "NotReal"
 	add.T = time.Now()
 	plug.Handle(add, &b)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
-	got := plug.Bids[id].FindBid("Mortimus")
-	plug.Bids[id].Bidders[got].Player.DKP = 0
+	got := plug.Bids[id].FindBid("NotReal")
+
 	plug.Bids[id].ApplyDKP()
 	appliedBid := plug.Bids[id].Bidders[got].Bid
 	want := 10
 	if appliedBid != want {
 		t.Errorf("ldplug.Handle(msg, &b) = %d, want %d", appliedBid, want)
+	}
+}
+
+func TestBidGitHubIssue34(t *testing.T) {
+	Roster["Rabidtiger"].DKP = 2000
+	Roster["Rabidtiger"].DKPRank = MAIN
+	Roster["Yilumi"].DKP = 2000
+	Roster["Yilumi"].DKPRank = MAIN
+	Roster["Nistalkin"].DKP = 2000
+	Roster["Nistalkin"].DKPRank = MAIN
+	Roster["Boseth"].DKP = 2000
+	Roster["Boseth"].DKPRank = MAIN
+	Roster["Bremen"].DKP = 2000
+	Roster["Bremen"].DKPRank = MAIN
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Cloth Capx2 bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Cloth Cap 75"
+	add.Source = "Rabidtiger"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Cloth Cap 20"
+	secondadd.Source = "Yilumi"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	thirdadd := new(everquest.EqLog)
+	thirdadd.Channel = "tell"
+	thirdadd.Msg = "Cloth Cap 20"
+	thirdadd.Source = "Nistalkin"
+	thirdadd.T = time.Now()
+	plug.Handle(thirdadd, &b)
+	fourthadd := new(everquest.EqLog)
+	fourthadd.Channel = "tell"
+	fourthadd.Msg = "Cloth Cap 20"
+	fourthadd.Source = "Boseth"
+	fourthadd.T = time.Now()
+	plug.Handle(fourthadd, &b)
+	fifthadd := new(everquest.EqLog)
+	fifthadd.Channel = "tell"
+	fifthadd.Msg = "Cloth Cap 20"
+	fifthadd.Source = "Bremen"
+	fifthadd.T = time.Now()
+	plug.Handle(fifthadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	plug.Bids[id].CloseBids(io.Discard)
+	got := plug.Bids[id].WinningBid
+	want := 20
+	if got != want {
+		t.Errorf("got %d, want %d", got, want)
+	}
+}
+
+func TestBidWinningPlusFive(t *testing.T) {
+	Roster["Rabidtiger"].DKP = 2000
+	Roster["Rabidtiger"].DKPRank = MAIN
+	Roster["Yilumi"].DKP = 2000
+	Roster["Yilumi"].DKPRank = MAIN
+	Roster["Nistalkin"].DKP = 2000
+	Roster["Nistalkin"].DKPRank = MAIN
+	Roster["Boseth"].DKP = 2000
+	Roster["Boseth"].DKPRank = MAIN
+	Roster["Bremen"].DKP = 2000
+	Roster["Bremen"].DKPRank = MAIN
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Cloth Cap bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Cloth Cap 75"
+	add.Source = "Rabidtiger"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Cloth Cap 65"
+	secondadd.Source = "Yilumi"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	thirdadd := new(everquest.EqLog)
+	thirdadd.Channel = "tell"
+	thirdadd.Msg = "Cloth Cap 60"
+	thirdadd.Source = "Nistalkin"
+	thirdadd.T = time.Now()
+	plug.Handle(thirdadd, &b)
+	fourthadd := new(everquest.EqLog)
+	fourthadd.Channel = "tell"
+	fourthadd.Msg = "Cloth Cap 20"
+	fourthadd.Source = "Boseth"
+	fourthadd.T = time.Now()
+	plug.Handle(fourthadd, &b)
+	fifthadd := new(everquest.EqLog)
+	fifthadd.Channel = "tell"
+	fifthadd.Msg = "Cloth Cap 10"
+	fifthadd.Source = "Bremen"
+	fifthadd.T = time.Now()
+	plug.Handle(fifthadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	plug.Bids[id].CloseBids(io.Discard)
+	got := plug.Bids[id].WinningBid
+	want := 70
+	if got != want {
+		t.Errorf("got %d, want %d", got, want)
+	}
+}
+
+func TestTiesSameRankTiedWinningBid(t *testing.T) {
+	Roster["Mortimus"].DKP = 2000
+	Roster["Mortimus"].DKPRank = MAIN
+	Roster["Penelo"].DKP = 2000
+	Roster["Penelo"].DKPRank = MAIN
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Cloth Cap bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Cloth Cap 300"
+	add.Source = "Mortimus"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Cloth Cap 300"
+	secondadd.Source = "Penelo"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	plug.Bids[id].CloseBids(io.Discard)
+	got := plug.Bids[id].WinningBid
+	want := 300
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %d, want %d", got, want)
+	}
+}
+
+func TestBidGitHubIssue40(t *testing.T) {
+	Roster["Greyvvolf"].DKP = 2000
+	Roster["Greyvvolf"].DKPRank = RECRUIT
+	Roster["Canniblepper"].DKP = 2000
+	Roster["Canniblepper"].DKPRank = SECONDMAIN
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Cloth Cap bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Cloth Cap 10"
+	add.Source = "Greyvvolf"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Cloth Cap 125"
+	secondadd.Source = "Canniblepper"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	plug.Bids[id].CloseBids(io.Discard)
+	got := plug.Bids[id].WinningBid
+	want := 10
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %d, want %d", got, want)
+	}
+	got2 := plug.Bids[id].Bidders[0].Player.Name
+	want2 := "Canniblepper"
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
+	}
+}
+
+func TestBidSingleMinBidWinner(t *testing.T) {
+	Roster["Guzz"].DKP = 2000
+	Roster["Guzz"].DKPRank = RECRUIT
+	Roster["Flappyhands"].DKP = 2000
+	Roster["Flappyhands"].DKPRank = SECONDMAIN
+	Roster["Boogabooga"].DKP = 2000
+	Roster["Boogabooga"].DKPRank = MAIN
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Cloth Cap bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Cloth Cap 700"
+	add.Source = "Guzz"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Cloth Cap 60"
+	secondadd.Source = "Flappyhands"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	thirdadd := new(everquest.EqLog)
+	thirdadd.Channel = "tell"
+	thirdadd.Msg = "Cloth Cap 0"
+	thirdadd.Source = "Boogabooga"
+	thirdadd.T = time.Now()
+	plug.Handle(thirdadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	// fmt.Printf("GuzzRank: %d FlappyRank: %d\n", GetEffectiveDKPRank(Roster["Guzz"].DKPRank), GetEffectiveDKPRank(Roster["Flappyhands"].DKPRank))
+	plug.Bids[id].CloseBids(io.Discard)
+	// fmt.Printf("GuzzRank: %d FlappyRank: %d\n", GetEffectiveDKPRank(Roster["Guzz"].DKPRank), GetEffectiveDKPRank(Roster["Flappyhands"].DKPRank))
+	got := plug.Bids[id].WinningBid
+	want := 10
+	if got != want {
+		t.Errorf("WinningBid %d, want %d", got, want)
+	}
+	got2 := plug.Bids[id].Bidders[0].Player.Name
+	want2 := "Flappyhands"
+	if got != want {
+		t.Errorf("Winner %s, want %s", got2, want2)
+	}
+}
+
+func TestBidMultiMinBidWinner(t *testing.T) {
+	Roster["Guzz"].DKP = 2000
+	Roster["Guzz"].DKPRank = RECRUIT
+	Roster["Flappyhands"].DKP = 2000
+	Roster["Flappyhands"].DKPRank = SECONDMAIN
+	Roster["Boogabooga"].DKP = 2000
+	Roster["Boogabooga"].DKPRank = MAIN
+	configuration.Bids.MinimumBid = 10
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Greaves of Furious Mightx2 bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Greaves of Furious Might 700"
+	add.Source = "Guzz"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Greaves of Furious Might 60 "
+	secondadd.Source = "Flappyhands"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	thirdadd := new(everquest.EqLog)
+	thirdadd.Channel = "tell"
+	thirdadd.Msg = "Greaves of Furious Might 0"
+	thirdadd.Source = "Boogabooga"
+	thirdadd.T = time.Now()
+	plug.Handle(thirdadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Greaves of Furious Might")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	plug.Bids[id].CloseBids(io.Discard)
+	got := plug.Bids[id].WinningBid
+	want := 10
+	if got != want {
+		t.Errorf("Got %d, want %d", got, want)
+	}
+	got2 := plug.Bids[id].Bidders[0].Player.Name
+	want2 := "Guzz"
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
+	}
+}
+
+func TestBidSingleMinBidWinner2(t *testing.T) {
+	Roster["Glooping"].DKP = 2000
+	Roster["Glooping"].DKPRank = MAIN
+	Roster["Yilumi"].DKP = 2000
+	Roster["Yilumi"].DKPRank = MAIN
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Cloth Cap bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Cloth Cap 325"
+	add.Source = "Glooping"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Cloth Cap 0"
+	secondadd.Source = "Yilumi"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	// fmt.Printf("GuzzRank: %d FlappyRank: %d\n", GetEffectiveDKPRank(Roster["Guzz"].DKPRank), GetEffectiveDKPRank(Roster["Flappyhands"].DKPRank))
+	plug.Bids[id].CloseBids(io.Discard)
+	// fmt.Printf("GuzzRank: %d FlappyRank: %d\n", GetEffectiveDKPRank(Roster["Guzz"].DKPRank), GetEffectiveDKPRank(Roster["Flappyhands"].DKPRank))
+	got := plug.Bids[id].WinningBid
+	want := 10
+	if got != want {
+		t.Errorf("WinningBid %d, want %d", got, want)
+	}
+	got2 := plug.Bids[id].Bidders[0].Player.Name
+	want2 := "Glooping"
+	if got != want {
+		t.Errorf("Winner %s, want %s", got2, want2)
+	}
+}
+
+func TestBidMultiDiffBids(t *testing.T) {
+	Roster["Draeadin"].DKP = 2000
+	Roster["Draeadin"].DKPRank = MAIN
+	Roster["Penelo"].DKP = 2000
+	Roster["Penelo"].DKPRank = MAIN
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Cloth Capx2 bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Cloth Cap 200"
+	add.Source = "Draeadin"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Cloth Cap 40"
+	secondadd.Source = "Penelo"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	// fmt.Printf("GuzzRank: %d FlappyRank: %d\n", GetEffectiveDKPRank(Roster["Guzz"].DKPRank), GetEffectiveDKPRank(Roster["Flappyhands"].DKPRank))
+	plug.Bids[id].CloseBids(io.Discard)
+	// fmt.Printf("GuzzRank: %d FlappyRank: %d\n", GetEffectiveDKPRank(Roster["Guzz"].DKPRank), GetEffectiveDKPRank(Roster["Flappyhands"].DKPRank))
+	got := plug.Bids[id].WinningBid
+	want := 10
+	if got != want {
+		t.Errorf("WinningBid %d, want %d", got, want)
+	}
+	got2 := plug.Bids[id].Bidders[0].Player.Name
+	want2 := "Draeadin"
+	if got != want {
+		t.Errorf("Winner %s, want %s", got2, want2)
+	}
+}
+
+func TestBidTripleBidWinner(t *testing.T) {
+	Roster["Voltha"].DKP = 2000
+	Roster["Voltha"].DKPRank = MAIN
+	Roster["Mayfair"].DKP = 2000
+	Roster["Mayfair"].DKPRank = MAIN
+	Roster["Boogabooga"].DKP = 2000
+	Roster["Boogabooga"].DKPRank = MAIN
+	Roster["Guzz"].DKP = 2000
+	Roster["Guzz"].DKPRank = MAIN
+	Roster["Sitoknight"].DKP = 2000
+	Roster["Sitoknight"].DKPRank = RECRUIT
+	configuration.Bids.MinimumBid = 10
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Mossy Enchanted Stonex2 bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Mossy Enchanted Stone 200"
+	add.Source = "Voltha"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Mossy Enchanted Stone 110"
+	secondadd.Source = "Mayfair"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	thirdadd := new(everquest.EqLog)
+	thirdadd.Channel = "tell"
+	thirdadd.Msg = "Mossy Enchanted Stone 45"
+	thirdadd.Source = "Boogabooga"
+	thirdadd.T = time.Now()
+	plug.Handle(thirdadd, &b)
+	fouradd := new(everquest.EqLog)
+	fouradd.Channel = "tell"
+	fouradd.Msg = "Mossy Enchanted Stone 15"
+	fouradd.Source = "Guzz"
+	fouradd.T = time.Now()
+	plug.Handle(fouradd, &b)
+	fiveadd := new(everquest.EqLog)
+	fiveadd.Channel = "tell"
+	fiveadd.Msg = "Mossy Enchanted Stone 75"
+	fiveadd.Source = "Sitoknight"
+	fiveadd.T = time.Now()
+	plug.Handle(fiveadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Mossy Enchanted Stone")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	plug.Bids[id].CloseBids(io.Discard)
+	got := plug.Bids[id].WinningBid
+	want := 50
+	if got != want {
+		t.Errorf("Got %d, want %d", got, want)
+	}
+	got2 := plug.Bids[id].Bidders[0].Player.Name
+	want2 := "Voltha"
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
 	}
 }

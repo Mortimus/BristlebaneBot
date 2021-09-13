@@ -18,8 +18,8 @@ func TestZone(t *testing.T) {
 	currentZone = ""
 	var b bytes.Buffer
 	ldplug.Handle(msg, &b)
-	got := b.String()
-	want := "Changing zone to Vex Thal\n"
+	got := currentZone
+	want := "Vex Thal"
 	if got != want {
 		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
 	}
