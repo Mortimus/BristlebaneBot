@@ -242,12 +242,12 @@ func TestGetDKPRankSecondMainHigherRankThanMain(t *testing.T) { // TODO: Fix thi
 	}
 	got2 := getDKPRank(&Roster["Fakemain"].GuildMember)
 	want2 := DKPRank(RECRUIT)
-	if got != want {
+	if got2 != want2 {
 		t.Errorf("Got %q, want %q", DKPRankToString(got2), DKPRankToString(want2))
 	}
 	got3 := getDKPRank(&Roster["Fakesecond"].GuildMember)
 	want3 := getDKPRank(&Roster["Fakemain"].GuildMember)
-	if got != want {
+	if got3 != want3 {
 		t.Errorf("Got %q, want %q", DKPRankToString(got3), DKPRankToString(want3))
 	}
 }
@@ -1217,7 +1217,7 @@ func TestBidGitHubIssue40(t *testing.T) {
 	}
 	got2 := plug.Bids[id].Bidders[0].Player.Name
 	want2 := "Canniblepper"
-	if got != want {
+	if got2 != want2 {
 		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
 	}
 }
@@ -1275,7 +1275,7 @@ func TestBidSingleMinBidWinner(t *testing.T) {
 	}
 	got2 := plug.Bids[id].Bidders[0].Player.Name
 	want2 := "Flappyhands"
-	if got != want {
+	if got2 != want2 {
 		t.Errorf("Winner %s, want %s", got2, want2)
 	}
 }
@@ -1330,10 +1330,17 @@ func TestBidMultiMinBidWinner(t *testing.T) {
 	if got != want {
 		t.Errorf("Got %d, want %d", got, want)
 	}
-	got2 := plug.Bids[id].Bidders[0].Player.Name
-	want2 := "Guzz"
-	if got != want {
-		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
+	winners := plug.Bids[id].GetWinnerNames()
+	got2 := winners[0]
+	want2 := "Flappyhands"
+
+	if got2 != want2 {
+		t.Errorf("1st place = %s, want %s", got2, want2)
+	}
+	got3 := winners[1]
+	want3 := "Guzz"
+	if got3 != want3 {
+		t.Errorf("2nd place = %s, want %s", got3, want3)
 	}
 }
 
@@ -1382,7 +1389,7 @@ func TestBidSingleMinBidWinner2(t *testing.T) {
 	}
 	got2 := plug.Bids[id].Bidders[0].Player.Name
 	want2 := "Glooping"
-	if got != want {
+	if got2 != want2 {
 		t.Errorf("Winner %s, want %s", got2, want2)
 	}
 }
@@ -1432,7 +1439,7 @@ func TestBidMultiDiffBids(t *testing.T) {
 	}
 	got2 := plug.Bids[id].Bidders[0].Player.Name
 	want2 := "Draeadin"
-	if got != want {
+	if got2 != want2 {
 		t.Errorf("Winner %s, want %s", got2, want2)
 	}
 }
@@ -1505,7 +1512,141 @@ func TestBidTripleBidWinner(t *testing.T) {
 	}
 	got2 := plug.Bids[id].Bidders[0].Player.Name
 	want2 := "Voltha"
-	if got != want {
+	if got2 != want2 {
 		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
+	}
+}
+
+func TestBidMultiItemBidIssue45(t *testing.T) {
+	Roster["Blepper"].DKP = 2000
+	Roster["Blepper"].DKPRank = MAIN
+	Roster["Renab"].DKP = 2000
+	Roster["Renab"].DKPRank = MAIN
+	Roster["Yilumi"].DKP = 2000
+	Roster["Yilumi"].DKPRank = MAIN
+	Roster["Wallen"].DKP = 2000
+	Roster["Wallen"].DKPRank = MAIN
+	Roster["Ravnor"].DKP = 2000
+	Roster["Ravnor"].DKPRank = MAIN
+	Roster["Bipp"].DKP = 2000
+	Roster["Bipp"].DKPRank = MAIN
+	Roster["Yzzy"].DKP = 2000
+	Roster["Yzzy"].DKPRank = MAIN
+	Roster["Glert"].DKP = 2000
+	Roster["Glert"].DKPRank = MAIN
+	Roster["Raage"].DKP = 2000
+	Roster["Raage"].DKPRank = MAIN
+	Roster["Ryder"].DKP = 2000
+	Roster["Ryder"].DKPRank = MAIN
+	Roster["Gausbert"].DKP = 2000
+	Roster["Gausbert"].DKPRank = MAIN
+	Roster["Liqqy"].DKP = 2000
+	Roster["Liqqy"].DKPRank = RECRUIT
+	configuration.Bids.MinimumBid = 10
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Mossy Enchanted Stonex2 bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+)\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Mossy Enchanted Stone 450"
+	add.Source = "Blepper"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "Mossy Enchanted Stone 25"
+	secondadd.Source = "Renab"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	thirdadd := new(everquest.EqLog)
+	thirdadd.Channel = "tell"
+	thirdadd.Msg = "Mossy Enchanted Stone 305"
+	thirdadd.Source = "Yilumi"
+	thirdadd.T = time.Now()
+	plug.Handle(thirdadd, &b)
+	fouradd := new(everquest.EqLog)
+	fouradd.Channel = "tell"
+	fouradd.Msg = "Mossy Enchanted Stone 300"
+	fouradd.Source = "Wallen"
+	fouradd.T = time.Now()
+	plug.Handle(fouradd, &b)
+	fiveadd := new(everquest.EqLog)
+	fiveadd.Channel = "tell"
+	fiveadd.Msg = "Mossy Enchanted Stone 210"
+	fiveadd.Source = "Ravnor"
+	fiveadd.T = time.Now()
+	plug.Handle(fiveadd, &b)
+	sixadd := new(everquest.EqLog)
+	sixadd.Channel = "tell"
+	sixadd.Msg = "Mossy Enchanted Stone 150"
+	sixadd.Source = "Bipp"
+	sixadd.T = time.Now()
+	plug.Handle(sixadd, &b)
+	sevnadd := new(everquest.EqLog)
+	sevnadd.Channel = "tell"
+	sevnadd.Msg = "Mossy Enchanted Stone 110"
+	sevnadd.Source = "Yzzy"
+	sevnadd.T = time.Now()
+	plug.Handle(sevnadd, &b)
+	eightadd := new(everquest.EqLog)
+	eightadd.Channel = "tell"
+	eightadd.Msg = "Mossy Enchanted Stone 25"
+	eightadd.Source = "Glert"
+	eightadd.T = time.Now()
+	plug.Handle(eightadd, &b)
+	nineadd := new(everquest.EqLog)
+	nineadd.Channel = "tell"
+	nineadd.Msg = "Mossy Enchanted Stone 20"
+	nineadd.Source = "Raage"
+	nineadd.T = time.Now()
+	plug.Handle(nineadd, &b)
+	tenadd := new(everquest.EqLog)
+	tenadd.Channel = "tell"
+	tenadd.Msg = "Mossy Enchanted Stone 15"
+	tenadd.Source = "Ryder"
+	tenadd.T = time.Now()
+	plug.Handle(tenadd, &b)
+	eleadd := new(everquest.EqLog)
+	eleadd.Channel = "tell"
+	eleadd.Msg = "Mossy Enchanted Stone 10"
+	eleadd.Source = "Gausbert"
+	eleadd.T = time.Now()
+	plug.Handle(eleadd, &b)
+	twelveadd := new(everquest.EqLog)
+	twelveadd.Channel = "tell"
+	twelveadd.Msg = "Mossy Enchanted Stone 400"
+	twelveadd.Source = "Liqqy"
+	twelveadd.T = time.Now()
+	plug.Handle(twelveadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Mossy Enchanted Stone")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	plug.Bids[id].CloseBids(io.Discard)
+	got := plug.Bids[id].WinningBid
+	want := 305
+	if got != want {
+		t.Errorf("Got %d, want %d", got, want)
+	}
+	got2 := plug.Bids[id].Bidders[0].Player.Name
+	want2 := "Blepper"
+	if got2 != want2 {
+		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
+	}
+	got3 := plug.Bids[id].Bidders[1].Player.Name
+	want3 := "Yilumi"
+	if got3 != want3 {
+		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got3, want3)
 	}
 }

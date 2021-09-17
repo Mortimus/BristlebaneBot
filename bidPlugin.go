@@ -473,6 +473,7 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 	b.ApplyDKP()
 	// Sort bidders by highest accounting for rank
 	b.SortBids()
+
 	// Check for ties
 	ties := b.CheckTiesAndApplyWinners()
 	var tieCount int
@@ -1033,8 +1034,56 @@ func (b *OpenBid) GetWinnerNames() []string {
 }
 
 func (b *OpenBid) SortBids() { // TODO: This isn't working correctly -> fixed, but check testing
+	/*
+		INACTIVE = iota
+		SOCIAL
+		ALT
+		RECRUIT
+		SECONDMAIN
+		MAIN
+	*/
+	// Sort by Bid
+	// fmt.Printf("Pre-Sort\n")
+	// b.printBidders()
 	sort.Sort(sort.Reverse(ByBid(b.Bidders)))
-	sort.Sort(sort.Reverse(ByRank(b.Bidders)))
+	// Remove each effective rank into seperate slice
+	var mains, secondmains, recruits, alts, socials, inactives []*Bidder
+	for i := range b.Bidders {
+		if GetEffectiveDKPRank(b.Bidders[i].Player.DKPRank) == MAIN {
+			mains = append(mains, b.Bidders[i])
+		}
+		if GetEffectiveDKPRank(b.Bidders[i].Player.DKPRank) == SECONDMAIN {
+			secondmains = append(secondmains, b.Bidders[i])
+		}
+		if GetEffectiveDKPRank(b.Bidders[i].Player.DKPRank) == RECRUIT {
+			recruits = append(recruits, b.Bidders[i])
+		}
+		if GetEffectiveDKPRank(b.Bidders[i].Player.DKPRank) == ALT {
+			alts = append(alts, b.Bidders[i])
+		}
+		if GetEffectiveDKPRank(b.Bidders[i].Player.DKPRank) == SOCIAL {
+			socials = append(socials, b.Bidders[i])
+		}
+		if GetEffectiveDKPRank(b.Bidders[i].Player.DKPRank) == INACTIVE {
+			inactives = append(inactives, b.Bidders[i])
+		}
+	}
+	// nullify b.bidders
+	b.Bidders = nil
+	b.Bidders = append(b.Bidders, mains...)
+	b.Bidders = append(b.Bidders, secondmains...)
+	b.Bidders = append(b.Bidders, recruits...)
+	b.Bidders = append(b.Bidders, alts...)
+	b.Bidders = append(b.Bidders, socials...)
+	b.Bidders = append(b.Bidders, inactives...)
+	// fmt.Printf("Post-Sort\n")
+	// b.printBidders()
+}
+
+func (b *OpenBid) printBidders() {
+	for _, bidder := range b.Bidders {
+		fmt.Printf("%s: %d\n", bidder.Player.Name, bidder.Bid)
+	}
 }
 
 type ByBid []*Bidder
@@ -1050,6 +1099,20 @@ func (a ByRank) Less(i, j int) bool {
 	return GetEffectiveDKPRank(a[i].Player.DKPRank) < GetEffectiveDKPRank(a[j].Player.DKPRank)
 }
 func (a ByRank) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+type ByBidAndRank []*Bidder
+
+func (a ByBidAndRank) Len() int { return len(a) }
+func (a ByBidAndRank) Less(i, j int) bool {
+	if a[i].Bid < a[j].Bid {
+		return true
+	}
+	if a[i].Bid > a[j].Bid {
+		return false
+	}
+	return GetEffectiveDKPRank(a[i].Player.DKPRank) < GetEffectiveDKPRank(a[j].Player.DKPRank)
+}
+func (a ByBidAndRank) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 func GetEffectiveDKPRank(rank DKPRank) DKPRank {
 	if configuration.Bids.SecondMainsBidAsMains && rank == SECONDMAIN {
