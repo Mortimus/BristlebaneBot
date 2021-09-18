@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -467,8 +466,6 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 	b.End = time.Now()
 	// Refresh DKP
 	updateRosterDKP()
-	// Remove cancelled bids -> we'll keep their bid but not let bids of <=0 win/tie
-	// b.RemoveCancelledBids()
 	// Update max dkp based on attempted amount
 	b.ApplyDKP()
 	// Sort bidders by highest accounting for rank
@@ -500,12 +497,7 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 
 	// Find winning cost
 	b.WinningBid = b.FindWinningBid()
-	// if tieCount > 0 { // Adjust dkp if it was a tie, we don't add dkp to a tied bid
-	// 	b.WinningBid -= 5
-	// 	if b.WinningBid > 0 && b.WinningBid < configuration.Bids.MinimumBid {
-	// 		b.WinningBid = configuration.Bids.MinimumBid
-	// 	}
-	// }
+
 	if b.WinningBid < 0 {
 		b.WinningBid = 0
 	}
@@ -532,18 +524,7 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 		}
 	}
 	b.GenerateInvestigation()
-	// TEST CODE ONLY
-	// if b.WinningBid == 0 && winners[0] != "Rot" {
-	// 	fmt.Printf("Somehow we have a 0 dkp win again :( -> %s", b.MessageID)
-	// 	uploadArchive(b.MessageID)
-	// 	os.Exit(1)
-	// }
-	// if b.WinningBid > 0 && winners[0] == "Rot" {
-	// 	fmt.Printf("Rot won with dkp somehow :( -> %s", b.MessageID)
-	// 	uploadArchive(b.MessageID)
-	// 	os.Exit(1)
-	// }
-	// END TEST CODE
+
 	winnerMessage := "```"
 
 	var playerWon bool
@@ -709,7 +690,6 @@ func (b *OpenBid) GenerateInvestigation() string {
 		Bidders:              Bidders,
 		Logs:                 Logs,
 	}
-	// hash := AsSha256(investigation)
 	hash := b.MessageID
 	filename := hash + ".json"
 	Info.Printf("Writing archive %s to file", filename)
@@ -797,19 +777,6 @@ func genUnknownMember(name string) *DKPHolder {
 	}
 }
 
-// func printRoster() {
-// 	for player, _ := range Roster {
-// 		fmt.Printf("%s\n", player)
-// 	}
-// }
-
-func AsSha256(o interface{}) string {
-	h := sha256.New()
-	h.Write([]byte(fmt.Sprintf("%v", o)))
-
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
 func canEquip(item everquest.Item, player everquest.GuildMember) bool { // TODO: new func, need to add this check to this plugin, and auto investigate if it influences the winner
 	classes := item.GetClasses()
 	for _, class := range classes {
@@ -819,134 +786,6 @@ func canEquip(item everquest.Item, player everquest.GuildMember) bool { // TODO:
 	}
 	return false
 }
-
-// func (b *OpenBid) FindWinningBid_OLD() int {
-// 	const DEBUG = true
-// 	if DEBUG {
-// 		fmt.Printf("configuration.Bids.MinimumBid: %d\n", configuration.Bids.MinimumBid)
-// 	}
-// 	var winningBid int
-// 	var winners int
-// 	var winRank DKPRank
-// 	for i, bidder := range b.Bidders {
-// 		if len(b.Bidders) == 1 && bidder.Bid >= configuration.Bids.MinimumBid { // only 1 winner, wins for minimum bid
-// 			return configuration.Bids.MinimumBid
-// 		}
-// 		if i < b.Quantity {
-// 			if DEBUG {
-// 				fmt.Printf("GetTopRankBid: %d winningBid: %d\n", bidder.Bid, winningBid)
-// 			}
-
-// 			winRank = GetEffectiveDKPRank(bidder.Player.DKPRank)
-// 			winningBid = configuration.Bids.MinimumBid
-// 			continue
-// 		}
-// 		if bidder.Bid > winningBid {
-// 			if DEBUG {
-// 				fmt.Printf("Bid: %d winningBid: %d\n", bidder.Bid, winningBid)
-// 			}
-
-// 			// winningBid = bidder.Bid
-// 			if bidder.Bid < b.Bidders[i-1].Bid {
-// 				winningBid = bidder.Bid + 5
-// 				// if len(b.Bidders) > i+1 && bidder.Bid == b.Bidders[i+1].Bid {
-// 				// 	winningBid = bidder.Bid
-// 				// }
-// 			} else {
-// 				winningBid = bidder.Bid
-// 			}
-// 		}
-// 		if DEBUG {
-// 			fmt.Printf("POST::Bid: %d winningBid: %d\n", bidder.Bid, winningBid)
-// 		}
-
-// 		// if bidder.Bid >= configuration.Bids.MinimumBid {
-// 		// 	// fmt.Printf("Len: %d i: %d\n", len(b.Bidders), i)
-// 		// 	if len(b.Bidders) > i+1 && b.Bidders[i+1].Bid >= configuration.Bids.MinimumBid && winRank == GetEffectiveDKPRank(b.Bidders[i+1].Player.DKPRank) {
-// 		// 		winningBid = bidder.Bid + 5
-// 		// 	} else {
-// 		// 		winningBid = bidder.Bid
-// 		// 	}
-// 		// }
-// 		winners++
-// 		if winners >= b.Quantity {
-// 			if DEBUG {
-// 				fmt.Printf("Quantity::winningBid: %d\n", winningBid)
-// 			}
-
-// 			if b.Bidders[i-1].Bid == bidder.Bid || (len(b.Bidders) > i+1 && b.Bidders[i+1].Bid == bidder.Bid && winRank == GetEffectiveDKPRank(b.Bidders[i+1].Player.DKPRank)) {
-// 				if DEBUG {
-// 					fmt.Printf("Quantity2::winningBid: %d\n", winningBid)
-// 				}
-// 				winningBid = bidder.Bid
-// 			} else {
-// 				if DEBUG {
-// 					fmt.Printf("Quantity3::winningBid: %d\n", winningBid)
-// 				}
-// 				if GetEffectiveDKPRank(bidder.Player.DKPRank) != winRank {
-// 					if DEBUG {
-// 						fmt.Printf("Quantity4::winningBid: %d\n", winningBid)
-// 					}
-// 					return configuration.Bids.MinimumBid
-// 				}
-// 				if bidder.Bid == 0 {
-// 					if DEBUG {
-// 						fmt.Printf("Quantity5::winningBid: %d\n", winningBid)
-// 					}
-// 					return configuration.Bids.MinimumBid
-// 				} else {
-// 					if DEBUG {
-// 						fmt.Printf("Quantity6::winningBid: %d\n", winningBid)
-// 					}
-// 					winningBid = b.Bidders[i-1].Bid + 5
-// 				}
-// 				if winningBid == 5 {
-// 					if DEBUG {
-// 						fmt.Printf("Quantity7::winningBid: %d\n", winningBid)
-// 					}
-// 					winningBid = configuration.Bids.MinimumBid
-// 				}
-// 			}
-// 			break
-// 		}
-// 		if GetEffectiveDKPRank(bidder.Player.DKPRank) != winRank { // Lower ranks can't upbid higher ranks
-// 			if DEBUG {
-// 				fmt.Printf("Rank::winningBid: %d\n", winningBid)
-// 			}
-
-// 			return configuration.Bids.MinimumBid
-// 		}
-
-// 		if winningBid == 0 && len(b.Bidders) == i+1 {
-// 			if DEBUG {
-// 				fmt.Printf("Rot::winningBid: %d\n", winningBid)
-// 			}
-
-// 			if i > 0 && bidder.Bid == 0 && b.Bidders[i-1].Bid >= configuration.Bids.MinimumBid {
-// 				return configuration.Bids.MinimumBid
-// 			} else {
-// 				return 0 // no winner, Rot wins
-// 			}
-// 		}
-// 		// This is weird
-// 		if len(b.Bidders) == i+1 && winners < b.Quantity { // we are on the last bidder and still have items to hand out, lowest possible bid won
-// 			if DEBUG {
-// 				fmt.Printf("LEN::winningBid: %d\n", winningBid)
-// 			}
-
-// 			return configuration.Bids.MinimumBid
-// 		}
-// 		// if bidder.Bid < winningBid {
-// 		// 	winningBid = bidder.Bid + 5
-// 		// 	break
-// 		// }
-// 	}
-// 	if DEBUG {
-// 		fmt.Printf("RETURN::winningBid: %d\n", winningBid)
-// 	}
-
-// 	return winningBid
-// }
 
 func (b *OpenBid) FindWinningBid() int {
 	const DEBUG = false

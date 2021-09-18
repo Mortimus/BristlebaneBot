@@ -24,6 +24,7 @@ type RaidPlugin struct {
 	Start     time.Time
 	NextDump  time.Time
 	Started   bool
+	LastRaid  everquest.Raid
 }
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 	Handlers = append(Handlers, plug)
 	plug.NeedsDump = true
 	plug.LastBoss = "Unknown"
+	plug.LastRaid = everquest.Raid{}
 
 	plug.SlayMatch, _ = regexp.Compile(configuration.Everquest.RegexSlay)
 }
@@ -65,7 +67,7 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 	if msg.Channel == "system" && strings.Contains(msg.Msg, "Outputfile") && strings.Contains(msg.Msg, "RaidRoster") {
 		// Upload the Raid Dump
 		outputName := msg.Msg[21:] // Filename Outputfile sent data to
-		file, err := os.Open(configuration.Everquest.BaseFolder + "/" + outputName)
+
 		stamp := msg.T.Format("20060102")
 		var fileName string
 		if !p.NeedsDump { // Boss Kill
@@ -83,6 +85,10 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			p.Start = getTime().Round(1 * time.Hour)
 			p.NextDump = msg.T.Add(1 * time.Hour)
 			p.Started = true
+			err := p.LastRaid.LoadFromPath(configuration.Everquest.BaseFolder+"/"+outputName, Err)
+			if err != nil {
+				Err.Printf("Error loading new raid: %s\n", err)
+			}
 		}
 		if p.NeedsDump && p.Hours > 0 {
 			fileName = fmt.Sprintf("%s_hour_%d.txt", stamp, p.Hours)
@@ -90,17 +96,58 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			p.Hours++
 			p.NextDump = msg.T.Add(1 * time.Hour)
 		}
-		if p.Output != TESTOUT && err != nil {
-			fmt.Fprintf(out, "Error finding Raid Dump: %s\n", outputName)
-			return
-		}
 		if p.Output == RAIDOUT { // Send to discord as an upload
-			discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, fileName, file)
+			file, err := os.Open(configuration.Everquest.BaseFolder + "/" + outputName)
+			if err != nil {
+				fmt.Fprintf(out, "Error finding Raid Dump: %s\n", outputName)
+			} else {
+				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, fileName, file)
+			}
 			// uploadRaidDump(outputName)
 		} else {
 			fmt.Fprintf(out, "Uploading Raid Dump: %s\n", fileName)
 		}
+		if p.Started {
+			// Diff the Raid Dump
+			newRaid := everquest.Raid{}
+			err := newRaid.LoadFromPath(configuration.Everquest.BaseFolder+"/"+outputName, Err)
+			if err != nil {
+				Err.Printf("Error loading new raid: %s\n", err)
+			}
+			// newMembers := everquest.NewRaidMembers(*p.LastRaid, newRaid)
+			// missMembers := everquest.MissingRaidMembers(*p.LastRaid, newRaid)
+			newMembers, missMembers := p.DiffRaid(newRaid)
+			p.LastRaid = newRaid
+			for _, member := range newMembers {
+				fmt.Fprintf(out, "```diff\n+ %s\n```", member.Player)
+			}
+			for _, member := range missMembers {
+				fmt.Fprintf(out, "```diff\n- %s\n```", member.Player)
+			}
+		}
 	}
+}
+
+func (p *RaidPlugin) DiffRaid(newRaid everquest.Raid) ([]everquest.RaidMember, []everquest.RaidMember) {
+	var newMembers []everquest.RaidMember
+	var missMembers []everquest.RaidMember
+	knownMembers := make(map[string]interface{})
+	newerMembers := make(map[string]interface{})
+	for _, member := range p.LastRaid.Members {
+		knownMembers[member.Player] = nil
+	}
+	for _, member := range newRaid.Members {
+		newerMembers[member.Player] = nil
+		if _, ok := knownMembers[member.Player]; !ok {
+			newMembers = append(newMembers, member)
+		}
+	}
+	for _, member := range p.LastRaid.Members {
+		if _, ok := newerMembers[member.Player]; !ok {
+			missMembers = append(missMembers, member)
+		}
+	}
+	return newMembers, missMembers
 }
 
 func (p *RaidPlugin) Info(out io.Writer) {
@@ -182,10 +229,12 @@ func seedBosses() {
 				newBoss.FTK = ftkPoints
 
 				isFTK := true
+				newBoss.IsFTK = isFTK
 				if len(row) > configuration.Sheets.BossSheetisFTKCol {
 					isFTKString := fmt.Sprintf("%s", row[configuration.Sheets.BossSheetisFTKCol])
 					isFTKString = strings.TrimSpace(isFTKString)
-					if isFTKString == "Yes" {
+					if strings.EqualFold(isFTKString, "Yes") {
+						// fmt.Printf("isFTK: %s: %s\n", newBoss.Boss, isFTKString)
 						isFTK = false
 					}
 					newBoss.IsFTK = isFTK
