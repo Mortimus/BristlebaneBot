@@ -1650,3 +1650,35 @@ func TestBidMultiItemBidIssue45(t *testing.T) {
 		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got3, want3)
 	}
 }
+
+func TestCanEquipNone(t *testing.T) { // TODO: Fix this with fake members
+	war := everquest.GuildMember{
+		Name:  "MrWarrior",
+		Class: "Warrior",
+	}
+	nec := everquest.GuildMember{
+		Name:  "MrNecro",
+		Class: "Necromancer",
+	}
+	id, _ := itemDB.FindIDByName("Kreljnok's Sword of Eternal Power")
+	item, _ := itemDB.GetItemByID(id)
+	got := canEquip(item, war)
+	want := true
+	if got != want {
+		t.Errorf("%s canEquip %s: %t, want %t", war.Name, item.Name, got, want)
+	}
+	// id2, _ := itemDB.FindIDByName("Mossy Enchanted Stone")
+	// item2, _ := itemDB.GetItemByID(id2)
+	got2 := canEquip(item, nec)
+	want2 := false
+	if got2 != want2 {
+		t.Errorf("%s canEquip %s: %t, want %t", nec.Name, item.Name, got2, want2)
+	}
+	id3, _ := itemDB.FindIDByName("Shard of Dark Matter")
+	item3, _ := itemDB.GetItemByID(id3)
+	got3 := canEquip(item3, nec)
+	want3 := true
+	if got3 != want3 {
+		t.Errorf("%s canEquip %s: %t, want %t", nec.Name, item3.Name, got3, want3)
+	}
+}

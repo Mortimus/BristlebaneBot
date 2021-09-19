@@ -779,6 +779,9 @@ func genUnknownMember(name string) *DKPHolder {
 
 func canEquip(item everquest.Item, player everquest.GuildMember) bool { // TODO: new func, need to add this check to this plugin, and auto investigate if it influences the winner
 	classes := item.GetClasses()
+	if len(classes) == 0 { // No class item, likely for a quest, or some other use
+		return true
+	}
 	for _, class := range classes {
 		if class == player.Class {
 			return true
