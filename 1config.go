@@ -54,6 +54,7 @@ type Bids struct {
 	CloseAutomatically     bool   `comment:"Close bids automatically after timer has expired"`
 	SecondMainsBidAsMains  bool   `comment:"Will second mains be tiered the same as mains"`
 	SecondMainAsMainMaxBid int    `comment:"Max value that bids can bid against mains, set to 0 for infinite"`
+	MaxBid                 int    `comment:"Max bid allowed for a single item needs to be lower to allow rounding down default: 9000"`
 }
 
 type Discord struct {

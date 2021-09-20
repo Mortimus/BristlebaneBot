@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -513,16 +512,6 @@ func parseLogs(ChatLogs chan everquest.EqLog, quit <-chan bool) {
 // 	}
 // 	return false
 // }
-
-func roundDown(n int) int {
-	f := float64(n)
-	fAmount := float64(configuration.Bids.Increments)
-	rounded := int(math.Round(f/fAmount) * fAmount)
-	if rounded > n {
-		return rounded - configuration.Bids.Increments
-	}
-	return rounded
-}
 
 // func (b *BidItem) bidderExists(user string) int {
 // 	Info.Printf("Checking if bidder %s exists in %#+v", user, b)

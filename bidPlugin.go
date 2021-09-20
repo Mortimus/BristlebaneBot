@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -72,6 +73,7 @@ type DKPHolder struct {
 }
 
 var Roster map[string]*DKPHolder
+var updateDKP bool
 
 func init() {
 	plug := new(BidPlugin)
@@ -103,6 +105,7 @@ func init() {
 	}
 
 	Handlers = append(Handlers, plug)
+	updateDKP = true
 }
 
 func (h *DKPHolder) AddDKPAttendance(dkp int, attendance float64, date time.Time) {
@@ -371,7 +374,7 @@ func (p *BidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			itemName := result[1]
 			itemID, _ := itemDB.FindIDByName(itemName)
 			bid, _ := strconv.Atoi(result[2])
-			// fmt.Printf("Result: %#+v itemName: %s itemID: %d bid: %d\n", result, itemName, itemID, bid)
+			// fmt.Printf("Result: %#+v itemName: %s itemID: %d bid: %d bidder: %s msg: %#+v\n", result, itemName, itemID, bid, msg.Source, msg)
 			if _, ok := p.Bids[itemID]; ok {
 				if _, ok := Roster[msg.Source]; ok {
 					p.Bids[itemID].AddBid(*Roster[msg.Source], bid, *msg)
@@ -465,7 +468,9 @@ func (b *OpenBid) AddBid(player DKPHolder, amount int, msg everquest.EqLog) {
 func (b *OpenBid) CloseBids(out io.Writer) {
 	b.End = time.Now()
 	// Refresh DKP
-	updateRosterDKP()
+	if updateDKP {
+		updateRosterDKP()
+	}
 	// Update max dkp based on attempted amount
 	b.ApplyDKP()
 	// Sort bidders by highest accounting for rank
@@ -777,7 +782,7 @@ func genUnknownMember(name string) *DKPHolder {
 	}
 }
 
-func canEquip(item everquest.Item, player everquest.GuildMember) bool { // TODO: new func, need to add this check to this plugin, and auto investigate if it influences the winner
+func canEquip(item everquest.Item, player everquest.GuildMember) bool {
 	classes := item.GetClasses()
 	if len(classes) == 0 { // No class item, likely for a quest, or some other use
 		return true
@@ -965,6 +970,9 @@ func GetEffectiveDKPRank(rank DKPRank) DKPRank {
 
 func (b *OpenBid) ApplyDKP() {
 	for i := range b.Bidders {
+		if b.Bidders[i].AttemptedBid > configuration.Bids.MaxBid { // This needs to be a smaller number so overflows don't happen and break rounding
+			b.Bidders[i].AttemptedBid = configuration.Bids.MaxBid
+		}
 		b.Bidders[i].Player.DKP = Roster[getMain(&b.Bidders[i].Player.GuildMember)].DKP // Apply the latest roster values to the bidder -> move to a function and apply secondmain/alt dkp
 		if b.Bidders[i].AttemptedBid > b.Bidders[i].Player.DKP {
 			if b.Bidders[i].Player.DKP < configuration.Bids.MinimumBid { // Todo: Need to make a test for this
@@ -979,7 +987,14 @@ func (b *OpenBid) ApplyDKP() {
 			b.Bidders[i].Bid = configuration.Bids.MinimumBid
 		}
 		if b.Bidders[i].AttemptedBid%configuration.Bids.Increments != 0 { // if you fail to bid in correct increments, we are setting you to minimum bid
-			b.Bidders[i].Bid = configuration.Bids.MinimumBid
+			// We should round down
+			rounded := roundDown(b.Bidders[i].AttemptedBid)
+			// fmt.Printf("Rounded: %d\n", rounded)
+			if rounded < configuration.Bids.MinimumBid {
+				rounded = configuration.Bids.MinimumBid
+			}
+			// fmt.Printf("Rounded Post: %d\n", rounded)
+			b.Bidders[i].Bid = rounded
 		}
 		if b.Bidders[i].AttemptedBid <= 0 { // Cancelled Bid
 			b.Bidders[i].Bid = 0
@@ -988,6 +1003,17 @@ func (b *OpenBid) ApplyDKP() {
 			b.Bidders[i].Bid = configuration.Bids.SecondMainAsMainMaxBid
 		}
 	}
+}
+
+func roundDown(n int) int {
+	f := float64(n)
+	fAmount := float64(configuration.Bids.Increments)
+	rounded := int(math.Round(f/fAmount) * fAmount)
+	// fmt.Printf("f: %f fAmount: %f rounded: %d f/fAmount: %f *fAmount: %f\n", f, fAmount, rounded, math.Round(f/fAmount), math.Round(f/fAmount)*fAmount)
+	if rounded > n {
+		return rounded - configuration.Bids.Increments
+	}
+	return rounded
 }
 
 func (b *OpenBid) MainsHaveBid() bool {
