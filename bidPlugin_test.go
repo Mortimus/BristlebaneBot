@@ -26,6 +26,7 @@ func TestBidOpen(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
@@ -47,6 +48,7 @@ func TestBidTimeWithSeconds(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
 	id, _ := itemDB.FindIDByName("Gloves of the Unseen")
@@ -68,6 +70,7 @@ func TestBidTimeWithoutSeconds(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
@@ -90,6 +93,7 @@ func TestBidChangeQuantity(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
 	oQuantity := plug.Bids[id].Quantity
@@ -118,6 +122,7 @@ func TestBidClose(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	id, _ := itemDB.FindIDByName("Cloth Cap")
 	item, _ := itemDB.GetItemByID(id)
 	plug.Bids[id] = &OpenBid{
@@ -309,6 +314,7 @@ func TestBidAdd(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -340,6 +346,7 @@ func TestBidAddAmount(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -373,6 +380,7 @@ func TestBidApply(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -405,6 +413,7 @@ func TestBidApplyTooMuch(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -437,6 +446,7 @@ func TestBidApplyBelowMin(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -469,6 +479,7 @@ func TestBidApplyNoIncrement(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -500,6 +511,7 @@ func TestBidApplyCancelledBid(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -533,6 +545,7 @@ func TestBidApplyNerfedSecondMain(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -580,6 +593,7 @@ func TestTiesSameRank(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -619,6 +633,7 @@ func TestTiesSameRankMulti(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -673,6 +688,7 @@ func TestTiesSecondAndThirdTie(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -724,6 +740,7 @@ func TestTiesCancelledTies(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -775,6 +792,7 @@ func TestTiesDiffRank(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -826,6 +844,7 @@ func TestTiesDiffRankCancelledBidSecondMain(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -877,6 +896,7 @@ func TestTiesDiffRankCancelledBid(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -928,6 +948,7 @@ func TestTiesMoreItemsThanTies(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -979,6 +1000,7 @@ func TestBidApplyNoDKP(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1021,6 +1043,7 @@ func TestBidGitHubIssue34(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1086,6 +1109,7 @@ func TestBidWinningPlusFive(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1147,6 +1171,7 @@ func TestTiesSameRankTiedWinningBid(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1190,6 +1215,7 @@ func TestBidGitHubIssue40(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1240,6 +1266,7 @@ func TestBidSingleMinBidWinner(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1299,6 +1326,7 @@ func TestBidMultiMinBidWinner(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1360,6 +1388,7 @@ func TestBidSingleMinBidWinner2(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1410,6 +1439,7 @@ func TestBidMultiDiffBids(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1467,6 +1497,7 @@ func TestBidTripleBidWinner(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1555,6 +1586,7 @@ func TestBidMultiItemBidIssue45(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1707,6 +1739,7 @@ func TestMissingBidsIssue47(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`'(.+[\w\d])\s+(\d+).*'`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1770,6 +1803,7 @@ func TestRoundDownIssue46(t *testing.T) {
 	plug.Bids = make(map[int]*OpenBid)
 	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.BidAddMatch, _ = regexp.Compile(`'(.+[\w\d])\s+(\d+).*'`)
 	var b bytes.Buffer
 	plug.Handle(msg, &b)
@@ -1782,6 +1816,58 @@ func TestRoundDownIssue46(t *testing.T) {
 	add := new(everquest.EqLog)
 	add.Channel = "tell"
 	add.Msg = "'Bulwark of Living Stone 200'"
+	add.Source = "Draeadin"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Bulwark of Living Stone")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	plug.Bids[id].CloseBids(io.Discard)
+	// plug.Bids[id].printBidders()
+	got := plug.Bids[id].WinningBid
+	want := 205
+	if got != want {
+		t.Errorf("Got %d, want %d", got, want)
+	}
+	got2 := plug.Bids[id].Bidders[0].Player.Name
+	want2 := "Bremen"
+	if got2 != want2 {
+		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
+	}
+}
+
+func TestItemBidNoSpace(t *testing.T) {
+	updateDKP = false
+	Roster["Draeadin"].DKP = 1420
+	Roster["Draeadin"].DKPRank = MAIN
+	Roster["Bremen"].DKP = 540
+	Roster["Bremen"].DKPRank = MAIN
+	configuration.Bids.MinimumBid = 10
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Bulwark of Living Stone bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
+	plug.BidAddMatch, _ = regexp.Compile(`'(.+[\w\d])\s+(\d+).*'`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "'Bulwark of Living Stone 999999999999999999999999999'"
+	secondadd.Source = "Bremen"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "'Bulwark of Living Stone200'"
 	add.Source = "Draeadin"
 	add.T = time.Now()
 	plug.Handle(add, &b)

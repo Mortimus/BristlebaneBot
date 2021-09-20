@@ -25,6 +25,7 @@ type BidPlugin struct {
 	BidOpenMatch  *regexp.Regexp
 	BidCloseMatch *regexp.Regexp
 	BidAddMatch   *regexp.Regexp
+	BidNumber     *regexp.Regexp
 	Bids          map[int]*OpenBid
 }
 
@@ -87,6 +88,7 @@ func init() {
 	// plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
 	plug.BidCloseMatch, _ = regexp.Compile(configuration.Bids.RegexClosedBid)
 	plug.BidAddMatch, _ = regexp.Compile(configuration.Bids.RegexTellBid)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
 	plug.Bids = make(map[int]*OpenBid)
 	Roster = make(map[string]*DKPHolder)
 	path, err := everquest.GetRecentRosterDump(configuration.Everquest.BaseFolder, configuration.Everquest.GuildName)
@@ -369,18 +371,19 @@ func (p *BidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 	}
 	if msg.Channel == "tell" {
 		// fmt.Printf("Got tell!: %#+v\n", msg)
-		result := p.BidAddMatch.FindStringSubmatch(msg.Msg)
-		if len(result) >= 2 {
-			itemName := result[1]
-			itemID, _ := itemDB.FindIDByName(itemName)
-			bid, _ := strconv.Atoi(result[2])
-			// fmt.Printf("Result: %#+v itemName: %s itemID: %d bid: %d bidder: %s msg: %#+v\n", result, itemName, itemID, bid, msg.Source, msg)
-			if _, ok := p.Bids[itemID]; ok {
-				if _, ok := Roster[msg.Source]; ok {
-					p.Bids[itemID].AddBid(*Roster[msg.Source], bid, *msg)
-				}
-			}
-		}
+		p.HandleTell(msg)
+		// result := p.BidAddMatch.FindStringSubmatch(msg.Msg)
+		// if len(result) >= 2 {
+		// 	itemName := result[1]
+		// 	itemID, _ := itemDB.FindIDByName(itemName)
+		// 	bid, _ := strconv.Atoi(result[2])
+		// 	// fmt.Printf("Result: %#+v itemName: %s itemID: %d bid: %d bidder: %s msg: %#+v\n", result, itemName, itemID, bid, msg.Source, msg)
+		// 	if _, ok := p.Bids[itemID]; ok {
+		// 		if _, ok := Roster[msg.Source]; ok {
+		// 			p.Bids[itemID].AddBid(*Roster[msg.Source], bid, *msg)
+		// 		}
+		// 	}
+		// }
 	}
 }
 
@@ -394,6 +397,31 @@ func (p *BidPlugin) Info(out io.Writer) {
 
 func (p *BidPlugin) OutputChannel() int {
 	return p.Output
+}
+
+func (p BidPlugin) HandleTell(msg *everquest.EqLog) {
+	if strings.ContainsAny(msg.Msg, "0123456789") {
+		for id, item := range p.Bids {
+			if strings.Contains(msg.Msg, item.Item.Name) {
+				bidString := strings.Replace(msg.Msg, item.Item.Name, "", 1)
+				bidString = strings.Replace(bidString, "2nd", "", -1) // Remove 2nd main talk
+				bidString = p.BidNumber.FindString(bidString)
+				bid, err := strconv.Atoi(bidString)
+				// fmt.Printf("BidString: %s Bid: %d\n", bidString, bid)
+				if err != nil {
+					Err.Printf("Error converting bid to number, %s\n", err)
+				}
+				if bid >= 0 {
+					source := msg.Source
+					if source == "You" {
+						source = getPlayerName(configuration.Everquest.LogPath)
+					}
+					p.Bids[id].AddBid(*Roster[source], bid, *msg)
+					return
+				}
+			}
+		}
+	}
 }
 
 func (p *BidPlugin) OpenBid(itemID int, quantity int, minutes int, seconds int, out io.Writer) error {
