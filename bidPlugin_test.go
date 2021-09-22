@@ -1424,8 +1424,8 @@ func TestBidSingleMinBidWinner2(t *testing.T) {
 }
 
 func TestBidMultiDiffBids(t *testing.T) {
-	Roster["Draeadin"].DKP = 2000
-	Roster["Draeadin"].DKPRank = MAIN
+	Roster["Drae"].DKP = 2000
+	Roster["Drae"].DKPRank = MAIN
 	Roster["Penelo"].DKP = 2000
 	Roster["Penelo"].DKPRank = MAIN
 	configuration.Bids.SecondMainsBidAsMains = true
@@ -1446,7 +1446,7 @@ func TestBidMultiDiffBids(t *testing.T) {
 	add := new(everquest.EqLog)
 	add.Channel = "tell"
 	add.Msg = "Cloth Cap 200"
-	add.Source = "Draeadin"
+	add.Source = "Drae"
 	add.T = time.Now()
 	plug.Handle(add, &b)
 	secondadd := new(everquest.EqLog)
@@ -1468,7 +1468,7 @@ func TestBidMultiDiffBids(t *testing.T) {
 		t.Errorf("WinningBid %d, want %d", got, want)
 	}
 	got2 := plug.Bids[id].Bidders[0].Player.Name
-	want2 := "Draeadin"
+	want2 := "Drae"
 	if got2 != want2 {
 		t.Errorf("Winner %s, want %s", got2, want2)
 	}

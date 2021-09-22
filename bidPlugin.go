@@ -1027,7 +1027,7 @@ func (b *OpenBid) ApplyDKP() {
 		if b.Bidders[i].AttemptedBid <= 0 { // Cancelled Bid
 			b.Bidders[i].Bid = 0
 		}
-		if configuration.Bids.SecondMainsBidAsMains && b.Bidders[i].Player.DKPRank == SECONDMAIN && b.Bidders[i].Bid > configuration.Bids.SecondMainAsMainMaxBid && b.MainsHaveBid() { // Only limit 2nd main bid if mains have bid
+		if configuration.Bids.SecondMainsBidAsMains && b.Bidders[i].Player.DKPRank == SECONDMAIN && b.Bidders[i].Bid > configuration.Bids.SecondMainAsMainMaxBid { // limit to 200 dkp always on secondmains for primary content
 			b.Bidders[i].Bid = configuration.Bids.SecondMainAsMainMaxBid
 		}
 	}
