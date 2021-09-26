@@ -1014,7 +1014,7 @@ func (b *OpenBid) ApplyDKP() {
 		if b.Bidders[i].AttemptedBid > 0 && b.Bidders[i].AttemptedBid < configuration.Bids.MinimumBid {
 			b.Bidders[i].Bid = configuration.Bids.MinimumBid
 		}
-		if b.Bidders[i].AttemptedBid%configuration.Bids.Increments != 0 { // if you fail to bid in correct increments, we are setting you to minimum bid
+		if b.Bidders[i].AttemptedBid%configuration.Bids.Increments != 0 && b.Bidders[i].Bid%configuration.Bids.Increments != 0 { // if you fail to bid in correct increments, we are setting you to minimum bid
 			// We should round down
 			rounded := roundDown(b.Bidders[i].AttemptedBid)
 			// fmt.Printf("Rounded: %d\n", rounded)

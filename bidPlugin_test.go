@@ -1888,3 +1888,66 @@ func TestItemBidNoSpace(t *testing.T) {
 		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
 	}
 }
+
+func TestRoundDownIssue51(t *testing.T) {
+	updateDKP = false
+	// for k, _ := range Roster {
+	// 	fmt.Printf("%s\n", k)
+	// }
+	Roster["Silvae"].DKP = 170
+	Roster["Silvae"].DKPRank = MAIN
+	Roster["Geban"].DKP = 855
+	Roster["Geban"].DKPRank = MAIN
+	Roster["Karalaine"].DKP = 1800
+	Roster["Karalaine"].DKPRank = MAIN
+	configuration.Bids.MinimumBid = 10
+	configuration.Bids.SecondMainsBidAsMains = true
+	configuration.Bids.SecondMainAsMainMaxBid = 200
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Bulwark of Living Stone bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
+	plug.BidAddMatch, _ = regexp.Compile(`'(.+[\w\d])\s+(\d+).*'`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	secondadd := new(everquest.EqLog)
+	secondadd.Channel = "tell"
+	secondadd.Msg = "'Bulwark of Living Stone 999'"
+	secondadd.Source = "Silvae"
+	secondadd.T = time.Now()
+	plug.Handle(secondadd, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "'Bulwark of Living Stone 855'"
+	add.Source = "Geban"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	thirdadd := new(everquest.EqLog)
+	thirdadd.Channel = "tell"
+	thirdadd.Msg = "'Bulwark of Living Stone 800'"
+	thirdadd.Source = "Karalaine"
+	thirdadd.T = time.Now()
+	plug.Handle(thirdadd, &b)
+	//----------------
+	id, _ := itemDB.FindIDByName("Bulwark of Living Stone")
+	// plug.Bids[id].ApplyDKP()
+	// plug.Bids[id].SortBids()
+	plug.Bids[id].CloseBids(io.Discard)
+	// plug.Bids[id].printBidders()
+	got := plug.Bids[id].WinningBid
+	want := 805
+	if got != want {
+		t.Errorf("Got %d, want %d", got, want)
+	}
+	got2 := plug.Bids[id].Bidders[0].Player.Name
+	want2 := "Geban"
+	if got2 != want2 {
+		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
+	}
+}

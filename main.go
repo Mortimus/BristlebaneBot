@@ -815,6 +815,9 @@ func getTime() time.Time {
 
 func uploadArchive(id string) {
 	file, err := os.Open("archive/" + id + ".json") // TODO: Account for linux, and maliciousness
+	if !configuration.Discord.UseDiscord {
+		return
+	}
 	if err != nil {
 		Err.Printf("Error finding archive: %s", err.Error())
 		discord.ChannelMessageSend(configuration.Discord.InvestigationChannelID, "Error uploading investigation: "+id)
