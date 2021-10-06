@@ -67,6 +67,8 @@ github.com/Mortimus/goEverquest v0.0.0-20210518134015-c32e818be108 h1:zTRJf1PtQX
 github.com/Mortimus/goEverquest v0.0.0-20210518134015-c32e818be108/go.mod h1:88JHukpVn0kVv6MAXEmTf+ThPd52P2OvoYUZHxAbaV4=
 github.com/Mortimus/goEverquest v0.0.0-20210613043116-3a622b6ecb15 h1:wVbAN1Jp2sDacfozk7sxsBXQWkALB+gKl6ddRs4wx1w=
 github.com/Mortimus/goEverquest v0.0.0-20210613043116-3a622b6ecb15/go.mod h1:88JHukpVn0kVv6MAXEmTf+ThPd52P2OvoYUZHxAbaV4=
+github.com/Mortimus/goEverquest v0.0.0-20211006211331-d8d3d16f2de1 h1:qxmdjcDnv5iDtpq7purcTCO4Cl1JC3QHvMj03I5CV+Q=
+github.com/Mortimus/goEverquest v0.0.0-20211006211331-d8d3d16f2de1/go.mod h1:88JHukpVn0kVv6MAXEmTf+ThPd52P2OvoYUZHxAbaV4=
 github.com/bwmarrin/discordgo v0.23.2 h1:BzrtTktixGHIu9Tt7dEE6diysEF9HWnXeHuoJEt2fH4=
 github.com/bwmarrin/discordgo v0.23.2/go.mod h1:c1WtWUGN6nREDmzIpyTp/iD3VYt4Fpx+bVyfBG7JE+M=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

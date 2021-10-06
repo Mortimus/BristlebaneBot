@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	cloud.google.com/go v0.84.0 // indirect
-	github.com/Mortimus/goEverquest v0.0.0-20210613043116-3a622b6ecb15
+	github.com/Mortimus/goEverquest v0.0.0-20211006211331-d8d3d16f2de1
 	github.com/bwmarrin/discordgo v0.23.2
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
