@@ -38,6 +38,28 @@ func TestBidOpen(t *testing.T) {
 	}
 }
 
+func TestBidOpenTellsTo(t *testing.T) {
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Cloth Cap tells to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	id, _ := itemDB.FindIDByName("Cloth Cap")
+	// fmt.Printf("ID: %d\n", id)
+	got := plug.Bids[id].Quantity
+	want := 1
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
+	}
+}
+
 func TestBidTimeWithSeconds(t *testing.T) {
 	plug := new(BidPlugin)
 	msg := new(everquest.EqLog)
