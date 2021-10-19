@@ -21,6 +21,8 @@ import (
 // var bidLock sync.Mutex
 // var bids = map[string]*BidItem{}
 
+var printChan = make(chan string)
+
 var itemDB everquest.ItemDB
 var spellDB everquest.SpellDB
 
@@ -167,29 +169,41 @@ func main() {
 	DiscordF(configuration.Discord.InvestigationChannelID, "**BidBot online**\n> Secondmains bid as mains: %t\n> Secondmain max bid: %d (0 means infinite)", configuration.Bids.SecondMainsBidAsMains, configuration.Bids.SecondMainAsMainMaxBid)
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-sc
-	Quit <- true
+	for {
+		select {
+		case <-sc:
+			return
+		case pMsg := <-printChan:
+			fmt.Printf("%s", pMsg)
+		}
+	}
+	// <-sc
+	// Quit <- true
 }
 
-func printHUD() {
-	fmt.Print("\033[H\033[2J") // clear the terminal should only work in windows
-	fmt.Printf("Time: %s\n", currentTime.String())
-	fmt.Printf("Player: %s\tZone: %s\n", getPlayerName(configuration.Everquest.LogPath), currentZone)
-	fmt.Printf("Guild Members: %d\n", len(Roster))
-	fmt.Printf("SecondMainsBidAsMains: %t\tSecondMainMaxBidAsMain: %d\n", configuration.Bids.SecondMainsBidAsMains, configuration.Bids.SecondMainAsMainMaxBid)
-	fmt.Printf("Waiting to be looted: %d\n", len(needsLooted))
-	for num, item := range needsLooted {
-		fmt.Printf("#%d: %s\n", num+1, item)
-	}
-}
+// func printHUD() {
+// 	fmt.Print("\033[H\033[2J") // clear the terminal should only work in windows
+// 	fmt.Printf("Time: %s\n", currentTime.String())
+// 	fmt.Printf("Player: %s\tZone: %s\n", getPlayerName(configuration.Everquest.LogPath), currentZone)
+// 	fmt.Printf("Guild Members: %d\n", len(Roster))
+// 	fmt.Printf("SecondMainsBidAsMains: %t\tSecondMainMaxBidAsMain: %d\n", configuration.Bids.SecondMainsBidAsMains, configuration.Bids.SecondMainAsMainMaxBid)
+// 	fmt.Printf("Waiting to be looted: %d\n", len(needsLooted))
+// 	for num, item := range needsLooted {
+// 		fmt.Printf("#%d: %s\n", num+1, item)
+// 	}
+// }
 
 func parseLogs(ChatLogs chan everquest.EqLog, quit <-chan bool) {
 	Info.Printf("Parsing logs")
-	printHUD()
+	// printHUD()
 	for msgs := range ChatLogs {
 		currentTime = msgs.T
 		if (msgs.Channel == "guild" && msgs.Source == "You") || msgs.Channel == "tell" {
 			investigation.addLog(msgs)
+			// printMessage(&msgs)
+		}
+		if msgs.Channel == "tell" || (msgs.Source == "You" && strings.Contains(msgs.Msg, "told")) {
+			printMessage(&msgs)
 		}
 		//checkClosedBids()
 		//parseLogLine(msgs) // Old, should be replaced with plugin system below

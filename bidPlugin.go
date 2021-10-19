@@ -17,6 +17,7 @@ import (
 	"time"
 
 	everquest "github.com/Mortimus/goEverquest"
+	"github.com/fatih/color"
 )
 
 // type BidPlugin Plugin
@@ -322,7 +323,7 @@ func (p *BidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 	if msg.Channel == "guild" && msg.Source == "You" {
 		{ // Check for open bid
 			result := p.BidOpenMatch.FindStringSubmatch(msg.Msg)
-			p.BidOpenMatch.String()
+			// p.BidOpenMatch.String()
 			if len(result) > 3 {
 				// result[1] == Item
 				itemName := result[1]
@@ -401,7 +402,10 @@ func (p *BidPlugin) OutputChannel() int {
 
 func (p BidPlugin) HandleTell(msg *everquest.EqLog) {
 	if strings.ContainsAny(msg.Msg, "0123456789") {
+		// totalItems := len(p.Bids)
+		// var curItem int
 		for id, item := range p.Bids {
+			// curItem++
 			if strings.Contains(msg.Msg, item.Item.Name) {
 				bidString := strings.Replace(msg.Msg, item.Item.Name, "", 1)
 				bidString = strings.Replace(bidString, "2nd", "", -1) // Remove 2nd main talk
@@ -419,7 +423,29 @@ func (p BidPlugin) HandleTell(msg *everquest.EqLog) {
 					p.Bids[id].AddBid(*Roster[source], bid, *msg)
 					return
 				}
+			} else {
+				// fmt.Printf("Cur: %d Total: %d\n", curItem, totalItems)
+				// if curItem == totalItems {
+				// 	printMessage(msg)
+				// }
 			}
+		}
+	}
+}
+
+func printMessage(msg *everquest.EqLog) {
+	// log.Printf("Printing %s\n", msg.Msg)
+	if !strings.ContainsAny(msg.Msg, "0123456789") {
+		i := strings.Index(msg.Msg, ", '")
+		message := msg.Msg[i+3 : len(msg.Msg)-1]
+		if msg.Source == "You" && strings.Contains(msg.Msg, "told") {
+			// You told sacristan, 'can i get brells?'
+			tTarget := strings.Title(msg.Msg[9:i])
+			printChan <- fmt.Sprintf("%s->%s: %s\n", color.RedString(msg.Source), color.GreenString(tTarget), color.MagentaString(message))
+			// fmt.Printf("%s: %s\n", color.RedString(msg.Source), color.MagentaString(message))
+		} else {
+			printChan <- fmt.Sprintf("%s: %s\n", color.CyanString(msg.Source), color.YellowString(message))
+			// fmt.Printf("%s: %s\n", color.CyanString(msg.Source), color.MagentaString(message))
 		}
 	}
 }
