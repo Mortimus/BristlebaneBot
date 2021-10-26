@@ -436,11 +436,20 @@ func (p BidPlugin) HandleTell(msg *everquest.EqLog) {
 func printMessage(msg *everquest.EqLog) {
 	// log.Printf("Printing %s\n", msg.Msg)
 	if !strings.ContainsAny(msg.Msg, "0123456789") {
-		i := strings.Index(msg.Msg, ", '")
-		message := msg.Msg[i+3 : len(msg.Msg)-1]
+		i := strings.Index(msg.Msg, " '")
+		var message string
+		if strings.Contains(msg.Msg, "[queued]") {
+			message = msg.Msg[i+3 : len(msg.Msg)-1]
+		} else {
+			message = msg.Msg[i+2 : len(msg.Msg)-1]
+		}
 		if msg.Source == "You" && strings.Contains(msg.Msg, "told") {
 			// You told sacristan, 'can i get brells?'
+			// [Sun Oct 24 18:24:48 2021] You told Ravnor '[queued], ty sir'
+			// [Sun Oct 24 18:27:52 2021] You told Drae, 'AFK Message: Bla bla bla'
+			// fmt.Printf("MSG: %#+v\n", msg.Msg)
 			tTarget := strings.Title(msg.Msg[9:i])
+			tTarget = strings.Replace(tTarget, ",", "", 1)
 			printChan <- fmt.Sprintf("%s->%s: %s\n", color.RedString(msg.Source), color.GreenString(tTarget), color.MagentaString(message))
 			// fmt.Printf("%s: %s\n", color.RedString(msg.Source), color.MagentaString(message))
 		} else {

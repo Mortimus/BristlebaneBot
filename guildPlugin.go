@@ -11,18 +11,6 @@ import (
 // var nextDump time.Time
 type GuildPlugin Plugin
 
-// type GuildPlugin struct {
-// 	Plugin
-// 	Hours     int
-// 	Bosses    int
-// 	NeedsDump bool
-// 	LastBoss  string
-// 	SlayMatch *regexp.Regexp
-// 	Start     time.Time
-// 	NextDump  time.Time
-// 	Started   bool
-// }
-
 func init() {
 	plug := new(GuildPlugin)
 	plug.Name = "Guild Dump Detector"
