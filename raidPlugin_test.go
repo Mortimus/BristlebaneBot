@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -78,6 +79,8 @@ func TestRaidBossKillFTK(t *testing.T) {
 	//Tacvi: Tunat`Muram Cuu Vauax
 	msg.Msg = "Tunat`Muram Cuu Vauax has been slain by Mortimus!"
 	msg.Source = "Mortimus"
+	lowerBoss := strings.ToLower("Tunat`Muram Cuu Vauax")
+	bosses[lowerBoss].IsFTK = true
 	msg.T = time.Date(2021, time.April, 17, 20, 59, 52, 0, time.Local)
 	ldplug.Output = TESTOUT // anything but raid dump channel
 	ldplug.NeedsDump = false

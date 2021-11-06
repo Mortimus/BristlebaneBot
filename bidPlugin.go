@@ -322,6 +322,9 @@ func DKPRankToString(rank DKPRank) string {
 func (p *BidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 	if msg.Channel == "guild" && msg.Source == "You" {
 		{ // Check for open bid
+			if p.HandleMultiBids(msg, out) {
+				return // it's a multi bid, no need to process more
+			}
 			result := p.BidOpenMatch.FindStringSubmatch(msg.Msg)
 			// p.BidOpenMatch.String()
 			if len(result) > 3 {
@@ -1099,4 +1102,58 @@ func (b *OpenBid) FindBid(name string) int {
 		}
 	}
 	return -1
+}
+
+func (p *BidPlugin) HandleMultiBids(msg *everquest.EqLog, out io.Writer) bool {
+	// fmt.Printf("Handling multi bid\n")
+	if !strings.Contains(msg.Msg, "|") { // Not multi bid
+		return false
+	}
+	bids := strings.Split(msg.Msg, "|")
+	for i := range bids { // remove extra white space
+		bids[i] = strings.TrimSpace(bids[i])
+	}
+	notice := strings.Index(bids[len(bids)-1], " bids")
+	if notice == -1 {
+		notice = strings.Index(bids[len(bids)-1], " tells")
+		if notice == -1 { // still no bid open indicators
+			// fmt.Printf("Cannot find bid open indicator")
+			return false
+		}
+	}
+	bidinfo := bids[len(bids)-1][notice:]
+	bids[len(bids)-1] = bids[len(bids)-1][:notice] // remove the bid info from the last bid
+	items := make(map[string]int)
+	// find duplicates and increase quantity
+	for _, i := range bids {
+		if val, ok := items[i]; ok {
+			items[i] = val + 1
+		} else {
+			items[i] = 1
+		}
+	}
+	// fmt.Printf("Notice: %s\n", bidinfo)
+	// Determine how long bid will be open
+	nSplit := strings.Split(bidinfo, " ")
+	infoTime := nSplit[len(nSplit)-1]
+	minLoc := strings.Index(infoTime, "min")
+	minStr := infoTime[:minLoc]
+	mins, err := strconv.Atoi(minStr)
+	if err != nil {
+		log.Printf("Error converting min to int: %s\n", err)
+		mins = 2
+	}
+	// TODO: get seconds?
+
+	// Open the bids
+	for item, count := range items {
+		id, err := itemDB.FindIDByName(item)
+		if err != nil {
+			fmt.Fprintf(out, "Error finding item %s: %s\n", item, err)
+			continue
+		}
+		// fmt.Printf("Opening %dx%d for bids for %d minutes\n", id, count, mins)
+		p.OpenBid(id, count, mins, 0, out)
+	}
+	return true
 }

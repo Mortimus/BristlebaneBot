@@ -191,6 +191,9 @@ func seedBosses() {
 			if i == 1 {
 				continue // skip the header
 			}
+			if len(row) < configuration.Sheets.BossSheetFTKCol {
+				continue // sheet is not formatted correctly
+			}
 			boss := fmt.Sprintf("%s", row[configuration.Sheets.BossSheetBossCol])
 			i := strings.Index(boss, ":")
 			if i > -1 {

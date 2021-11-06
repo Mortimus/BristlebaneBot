@@ -1973,3 +1973,72 @@ func TestRoundDownIssue51(t *testing.T) {
 		t.Errorf("ldplug.Handle(msg, &b) = %s, want %s", got2, want2)
 	}
 }
+
+func TestBidMultiOpen(t *testing.T) {
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Scales of the Cragbeast Queen | Phosphorescent Bile | Misshapen Cragbeast Flesh bids to Mortimus, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	id1, _ := itemDB.FindIDByName("Scales of the Cragbeast Queen")
+	// fmt.Printf("ID: %d\n", id)
+	got := plug.Bids[id1].Quantity
+	want := 1
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
+	}
+	id2, _ := itemDB.FindIDByName("Phosphorescent Bile")
+	// fmt.Printf("ID: %d\n", id)
+	got2 := plug.Bids[id2].Quantity
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got2, want)
+	}
+	id3, _ := itemDB.FindIDByName("Misshapen Cragbeast Flesh")
+	// fmt.Printf("ID: %d\n", id)
+	got3 := plug.Bids[id3].Quantity
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got3, want)
+	}
+}
+
+func TestBidMultiOpenMultiQuantity(t *testing.T) {
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Scales of the Cragbeast Queen | Phosphorescent Bile | Scales of the Cragbeast Queen | Cloth Cap bids to Mortimus, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	id1, _ := itemDB.FindIDByName("Scales of the Cragbeast Queen")
+	// fmt.Printf("ID: %d\n", id)
+	got := plug.Bids[id1].Quantity
+	want := 2
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got, want)
+	}
+	id2, _ := itemDB.FindIDByName("Phosphorescent Bile")
+	// fmt.Printf("ID: %d\n", id)
+	got2 := plug.Bids[id2].Quantity
+	want2 := 1
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got2, want2)
+	}
+	id3, _ := itemDB.FindIDByName("Cloth Cap")
+	// fmt.Printf("ID: %d\n", id)
+	got3 := plug.Bids[id3].Quantity
+	if got != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %q, want %q", got3, want2)
+	}
+}
