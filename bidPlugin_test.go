@@ -1978,7 +1978,7 @@ func TestBidMultiOpen(t *testing.T) {
 	plug := new(BidPlugin)
 	msg := new(everquest.EqLog)
 	msg.Channel = "guild"
-	msg.Msg = "Scales of the Cragbeast Queen | Phosphorescent Bile | Misshapen Cragbeast Flesh bids to Mortimus, pst 2min"
+	msg.Msg = "You say to your guild, 'Scales of the Cragbeast Queen | Phosphorescent Bile | Misshapen Cragbeast Flesh bids to Mortimus, pst 2min'"
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)
@@ -2012,7 +2012,7 @@ func TestBidMultiOpenMultiQuantity(t *testing.T) {
 	plug := new(BidPlugin)
 	msg := new(everquest.EqLog)
 	msg.Channel = "guild"
-	msg.Msg = "Scales of the Cragbeast Queen | Phosphorescent Bile | Scales of the Cragbeast Queen | Cloth Cap bids to Mortimus, pst 2min"
+	msg.Msg = "You say to your guild, 'Scales of the Cragbeast Queen | Scales of the Cragbeast Queen | Phosphorescent Bile | Cloth Cap bids to Mortimus, pst 2min'"
 	msg.Source = "You"
 	msg.T = time.Now()
 	plug.Bids = make(map[int]*OpenBid)

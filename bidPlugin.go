@@ -38,17 +38,17 @@ type OpenBid struct {
 	End                  time.Time
 	Bidders              []*Bidder
 	Zone                 string
+	MessageID            string
 	SecondMainBidsAsMain bool
 	SecondMainMaxBid     int
 	WinningBid           int
-	MessageID            string
 }
 
 type Bidder struct {
 	Player       *DKPHolder
+	Message      everquest.EqLog
 	AttemptedBid int
 	Bid          int
-	Message      everquest.EqLog
 	WonOrTied    bool
 }
 
@@ -1106,10 +1106,15 @@ func (b *OpenBid) FindBid(name string) int {
 
 func (p *BidPlugin) HandleMultiBids(msg *everquest.EqLog, out io.Writer) bool {
 	// fmt.Printf("Handling multi bid\n")
-	if !strings.Contains(msg.Msg, "|") { // Not multi bid
+	msgStart := strings.Index(msg.Msg, "'")
+	if msgStart == -1 {
 		return false
 	}
-	bids := strings.Split(msg.Msg, "|")
+	bidMsg := msg.Msg[msgStart+1:]
+	if !strings.Contains(bidMsg, "|") { // Not multi bid
+		return false
+	}
+	bids := strings.Split(bidMsg, "|")
 	for i := range bids { // remove extra white space
 		bids[i] = strings.TrimSpace(bids[i])
 	}
@@ -1137,6 +1142,9 @@ func (p *BidPlugin) HandleMultiBids(msg *everquest.EqLog, out io.Writer) bool {
 	nSplit := strings.Split(bidinfo, " ")
 	infoTime := nSplit[len(nSplit)-1]
 	minLoc := strings.Index(infoTime, "min")
+	if minLoc == -1 {
+		return false
+	}
 	minStr := infoTime[:minLoc]
 	mins, err := strconv.Atoi(minStr)
 	if err != nil {
