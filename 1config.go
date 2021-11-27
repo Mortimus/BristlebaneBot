@@ -90,6 +90,7 @@ type Everquest struct {
 	FlagGiver         []string `comment:"log text for a character getting a flag - Hail, a planar projection"`
 	DKPGiver          []string `comment:"mob names that we apply DKP for"`
 	SpellProvider     []string `comment:"item that provides a spell like Spectral Parchment"`
+	MissingItemsPath  string   `comment:"path to the missing items file"`
 }
 
 type Google struct {

@@ -3,19 +3,19 @@ module github.com/Mortimus/BristlebaneBot
 go 1.16
 
 require (
-	github.com/Mortimus/goEverquest v0.0.0-20211024194121-3c2da3e896a3
+	github.com/Mortimus/goEverquest v0.0.0-20211127151718-c7db6ce0364c
 	github.com/bwmarrin/discordgo v0.23.2
 	github.com/fatih/color v1.13.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
-	github.com/mattn/go-colorable v0.1.11 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/pelletier/go-toml v1.9.4
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/net v0.0.0-20211020060615-d418f374d309 // indirect
-	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
-	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359
+	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871 // indirect
+	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
+	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/api v0.59.0
-	google.golang.org/genproto v0.0.0-20211026145609-4688e4c4e024 // indirect
-	google.golang.org/grpc v1.41.0 // indirect
+	google.golang.org/api v0.60.0
+	google.golang.org/genproto v0.0.0-20211118181313-81c1377c94b1 // indirect
+	google.golang.org/grpc v1.42.0 // indirect
 )

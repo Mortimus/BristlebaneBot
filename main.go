@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -52,6 +54,11 @@ func init() {
 		Debug.SetOutput(ioutil.Discard)
 	}
 	itemDB.LoadFromFile(configuration.Everquest.ItemDB, Err, Info)
+	// Load dummy items
+	err = loadDummyItems(configuration.Everquest.MissingItemsPath)
+	if err != nil {
+		Err.Printf("Error loading dummy items: %s", err.Error())
+	}
 	spellDB.LoadFromFile(configuration.Everquest.SpellDB, Err)
 
 	archives = getArchiveList()
@@ -288,4 +295,36 @@ func isDumpOutOfDate(dump string) bool {
 	}
 	// fmt.Printf("LogDate: %s Before: %s After: %s Dump: %s Result: %t\n", logDate.String(), time.Now().String(), time.Now().Add(-24*time.Hour).String(), dump, logDate.Before(time.Now()) && logDate.After(time.Now().Add(-24*time.Hour)))
 	return !(logDate.Before(time.Now()) && logDate.After(time.Now().Add(-24*time.Hour)))
+}
+
+func loadDummyItems(path string) error {
+	fmt.Printf("Loading Dummy Items\n")
+	// open file
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	// remember to close the file at the end of the program
+	defer f.Close()
+
+	// read csv values using csv.Reader
+	csvReader := csv.NewReader(f)
+	data, err := csvReader.ReadAll()
+	if err != nil {
+		return err
+	}
+	for _, row := range data {
+		id, err := strconv.Atoi(row[0])
+		if err != nil {
+			// fmt.Printf("Error decoding Int: %d :: %#+v -- %s\n", num, row, err.Error())
+			return err
+		}
+		// fmt.Printf("Adding %d: %s\n", id, row[1])
+		itemDB.AddItem(everquest.Item{
+			ID:   int(id),
+			Name: row[1],
+		})
+	}
+	return nil
 }
