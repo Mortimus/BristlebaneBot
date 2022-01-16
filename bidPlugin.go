@@ -514,8 +514,12 @@ func (p *BidPlugin) OpenBid(itemID int, quantity int, minutes int, seconds int, 
 func (b *OpenBid) AddBid(player DKPHolder, amount int, msg everquest.EqLog) {
 	pos := b.FindBid(player.Name)
 	if pos >= 0 {
-		b.Bidders[pos].AttemptedBid = amount
-		b.Bidders[pos].Message = msg
+		if amount > configuration.Bids.MinimumBid {
+			b.Bidders[pos].AttemptedBid = amount
+			b.Bidders[pos].Message = msg
+			return
+		}
+		b.Bidders = removeBidder(b.Bidders, pos)
 		return
 	} else {
 		bidder := &Bidder{
@@ -1102,6 +1106,10 @@ func (b *OpenBid) FindBid(name string) int {
 		}
 	}
 	return -1
+}
+
+func removeBidder(slice []*Bidder, pos int) []*Bidder {
+	return append(slice[:pos], slice[pos+1:]...)
 }
 
 func (p *BidPlugin) HandleMultiBids(msg *everquest.EqLog, out io.Writer) bool {

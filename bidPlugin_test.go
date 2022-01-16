@@ -1043,6 +1043,40 @@ func TestBidApplyNoDKP(t *testing.T) {
 	}
 }
 
+// Sapphire of Capricious Magic
+func TestBidApplyNoDKPSapphire(t *testing.T) {
+	mem := everquest.GuildMember{Name: "NotReal", Class: "Warrior", Level: 1, Rank: "Raider"}
+	Roster["NotReal"] = &DKPHolder{DKP: 0, DKPRank: MAIN, GuildMember: mem}
+	plug := new(BidPlugin)
+	msg := new(everquest.EqLog)
+	msg.Channel = "guild"
+	msg.Msg = "Sapphire of Capricious Magic bids to Bids, pst 2min"
+	msg.Source = "You"
+	msg.T = time.Now()
+	plug.Bids = make(map[int]*OpenBid)
+	plug.BidOpenMatch, _ = regexp.Compile(`(.+?)(x\d)*\s+(?:[Tt][Ee][Ll][Ll][Ss]|[Bb][Ii][Dd][Ss])?\sto\s.+,?\s?(?:pst)?\s(\d+)(?:min|m)(\d+)?`)
+	plug.BidCloseMatch, _ = regexp.Compile(`(.+?)(x\d)?\s+([Bb][Ii][Dd][Ss])?([Tt][Ee][Ll][Ll][Ss])?\sto\s.+,?.+([Cc][Ll][Oo][Ss][Ee][Dd]).*`)
+	plug.BidNumber, _ = regexp.Compile(`\d+`)
+	plug.BidAddMatch, _ = regexp.Compile(`(.+[\w\d])\s+(\d+).*`)
+	var b bytes.Buffer
+	plug.Handle(msg, &b)
+	add := new(everquest.EqLog)
+	add.Channel = "tell"
+	add.Msg = "Sapphire of Capricious Magic 100"
+	add.Source = "NotReal"
+	add.T = time.Now()
+	plug.Handle(add, &b)
+	id, _ := itemDB.FindIDByName("Sapphire of Capricious Magic")
+	got := plug.Bids[id].FindBid("NotReal")
+
+	plug.Bids[id].ApplyDKP()
+	appliedBid := plug.Bids[id].Bidders[got].Bid
+	want := 10
+	if appliedBid != want {
+		t.Errorf("ldplug.Handle(msg, &b) = %d, want %d", appliedBid, want)
+	}
+}
+
 func TestBidGitHubIssue34(t *testing.T) {
 	Roster["Rabidtiger"].DKP = 2000
 	Roster["Rabidtiger"].DKPRank = MAIN
