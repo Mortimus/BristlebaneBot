@@ -118,12 +118,18 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			// missMembers := everquest.MissingRaidMembers(*p.LastRaid, newRaid)
 			newMembers, missMembers := p.DiffRaid(newRaid)
 			p.LastRaid = newRaid
+			// diffString := fmt.Sprintf("")
+			var diffString string
 			for _, member := range newMembers {
-				fmt.Fprintf(out, "```diff\n+ %s\n```", member.Player)
+				diffString += fmt.Sprintf("```diff\n+ %s\n```", member.Player)
+				// fmt.Fprintf(out, "```diff\n+ %s\n```", member.Player)
 			}
 			for _, member := range missMembers {
-				fmt.Fprintf(out, "```diff\n- %s\n```", member.Player)
+				diffString += fmt.Sprintf("```diff\n- %s\n```", member.Player)
+				// fmt.Fprintf(out, "```diff\n- %s\n```", member.Player)
 			}
+			// diffString += fmt.Sprintf("\n```")
+			fmt.Fprintf(out, "%s", diffString)
 		}
 	}
 }

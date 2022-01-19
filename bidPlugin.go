@@ -282,7 +282,7 @@ func getDKPRank(member *everquest.GuildMember) DKPRank {
 	return INACTIVE
 }
 
-func getMain(member *everquest.GuildMember) string { // TODO: Fix -> account for no apostraphe
+func getMain(member *everquest.GuildMember) string {
 	if member.Alt {
 		if strings.Contains(member.PublicNote, "'") { // Mortimus's 2nd Main Mortimus's Alt
 			s := strings.Split(member.PublicNote, "'")
@@ -296,6 +296,7 @@ func getMain(member *everquest.GuildMember) string { // TODO: Fix -> account for
 				return s[0]
 			}
 		}
+		// Warn.Printf("Error finding main for %s based on %s\n", member.Name, member.PublicNote)
 	}
 	return member.Name
 }
@@ -426,12 +427,12 @@ func (p BidPlugin) HandleTell(msg *everquest.EqLog) {
 					p.Bids[id].AddBid(*Roster[source], bid, *msg)
 					return
 				}
-			} else {
-				// fmt.Printf("Cur: %d Total: %d\n", curItem, totalItems)
-				// if curItem == totalItems {
-				// 	printMessage(msg)
-				// }
-			}
+			} // else {
+			// fmt.Printf("Cur: %d Total: %d\n", curItem, totalItems)
+			// if curItem == totalItems {
+			// 	printMessage(msg)
+			// }
+			//}
 		}
 	}
 }
