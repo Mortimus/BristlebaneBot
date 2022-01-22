@@ -31,6 +31,7 @@ func (p *GuildPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 			fmt.Printf("Error loading roster dump: %s", err.Error())
 		} else {
 			fmt.Fprintf(out, "Updating Guild Roster: %s\n", outputName)
+			apiUploadGuildRoster(configuration.Everquest.BaseFolder + "/" + outputName)
 			updateGuildRoster(guild) // Fix github issue?
 			if _, ok := Roster[getPlayerName(configuration.Everquest.LogPath)]; ok {
 				currentZone = Roster[getPlayerName(configuration.Everquest.LogPath)].Zone

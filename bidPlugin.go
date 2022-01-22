@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,8 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -99,6 +102,7 @@ func init() {
 		guild := new(everquest.Guild)
 		fileLog := log.New(os.Stdout, "[WARN] ", log.Lshortfile|log.Ldate|log.Ltime|log.LUTC|log.Lmsgprefix)
 		fullpath := configuration.Everquest.BaseFolder + "/" + path
+		apiUploadGuildRoster(fullpath)
 		err := guild.LoadFromPath(fullpath, fileLog)
 		if err != nil {
 			fmt.Printf("Error loading roster dump: %s", err.Error())
@@ -140,6 +144,54 @@ func updateGuildRoster(guild *everquest.Guild) {
 	}
 	fixOutrankingSecondMains()
 	// updateRosterDKP()
+}
+
+func apiUploadGuildRoster(filename string) []byte {
+	Info.Printf("Uploading guild roster to API: %s", filename)
+	file, err := os.Open(filename)
+
+	if err != nil {
+		Err.Println(err)
+		return nil
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+
+	if err != nil {
+		Err.Println(err)
+		return nil
+	}
+
+	io.Copy(part, file)
+	writer.Close()
+	request, err := http.NewRequest("POST", configuration.Main.GuildUploadAPIURL, body)
+
+	if err != nil {
+		Err.Println(err)
+		return nil
+	}
+
+	request.Header.Add("Content-Type", writer.FormDataContentType())
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+
+	if err != nil {
+		Err.Println(err)
+		return nil
+	}
+	defer response.Body.Close()
+
+	content, err := ioutil.ReadAll(response.Body)
+
+	if err != nil {
+		Err.Println(err)
+	}
+
+	return content
 }
 
 func fixOutrankingSecondMains() {
