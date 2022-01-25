@@ -314,10 +314,10 @@ func getDKPRank(member *everquest.GuildMember) DKPRank {
 	if member.Rank == "Inactive" {
 		return INACTIVE
 	}
-	if !member.Alt && member.HasRank([]string{"<<< Guild Leader >>>", "<<< Raid/Class Lead/Recruitment >>>", "<<< Officer >>>", "Raider"}) {
+	if !member.Alt && member.HasRank([]string{"<<< Guild Leader >>>", "<<< Class Lead >>>", "<<< Officer >>>", "Raider"}) {
 		return MAIN
 	}
-	if member.Alt && strings.Contains(member.PublicNote, "nd Main") || member.Alt && strings.Contains(member.PublicNote, "nd main") { //&& member.HasRank([]string{"<<< Guild Leader >>>", "<<< Raid/Class Lead/Recruitment >>>", "<<< Officer >>>", "Raider", "Alt"}) { // need to check for spelling mistakes
+	if member.Alt && strings.Contains(member.PublicNote, "nd Main") || member.Alt && strings.Contains(member.PublicNote, "nd main") {
 		// Check if their main has a lower rank than SECONDMAIN
 		return SECONDMAIN
 	}
