@@ -69,6 +69,14 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 		outputName := msg.Msg[21:] // Filename Outputfile sent data to
 
 		stamp := msg.T.Format("20060102")
+		dkpExportName := "DKP_" + TimeStamp() + ".csv"
+		exportDKP("backup/" + dkpExportName)
+		dkpfile, err := os.Open("backup/" + dkpExportName)
+		if err != nil {
+			fmt.Fprintf(out, "Error finding DKP Dump: %s\n", outputName)
+		} else {
+			discord.ChannelFileSend(configuration.Discord.DKPArchiveChannelID, dkpExportName, dkpfile)
+		}
 		var fileName string
 		if !p.NeedsDump { // Boss Kill
 			formattedBoss := strings.Replace(p.LastBoss, " ", "_", -1)  // Remove Spaces

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	everquest "github.com/Mortimus/goEverquest"
@@ -32,6 +33,12 @@ func (p *GuildPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 		} else {
 			fmt.Fprintf(out, "Updating Guild Roster: %s\n", outputName)
 			apiUploadGuildRoster(configuration.Everquest.BaseFolder + "/" + outputName)
+			guildFile, err := os.Open(configuration.Everquest.BaseFolder + "/" + outputName)
+			if err != nil {
+				fmt.Fprintf(out, "Error finding Guild Dump: %s\n", outputName)
+			} else {
+				discord.ChannelFileSend(configuration.Discord.RaidDumpChannelID, outputName, guildFile)
+			}
 			updateGuildRoster(guild) // Fix github issue?
 			if _, ok := Roster[getPlayerName(configuration.Everquest.LogPath)]; ok {
 				currentZone = Roster[getPlayerName(configuration.Everquest.LogPath)].Zone
@@ -40,6 +47,10 @@ func (p *GuildPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 		}
 	}
 }
+
+// func exportGuild(guild *everquest.Guild) {
+
+// }
 
 func (p *GuildPlugin) Info(out io.Writer) {
 	fmt.Fprintf(out, "---------------\n")

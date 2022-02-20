@@ -68,6 +68,7 @@ type Discord struct {
 	SpellDumpChannelID       string   `comment:"Discord channel to send spell loot to"`
 	FlagChannelID            string   `comment:"Discord channel to send acquired flags to"`
 	ParseChannelID           string   `comment:"Discord channel to send parses to"`
+	DKPArchiveChannelID      string   `comment:"Discord channel to send dkp backups to"`
 	UseDiscord               bool     `comment:"Should we use discord"`
 	InvestigationMinRequired int      `comment:"Number of reactions required to start investigation"`
 	PrivRoles                []string `comment:"Discord roles that are considered privledged, for starting investigations"`

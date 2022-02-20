@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -275,6 +276,94 @@ func updateRosterDKP() {
 		}
 	}
 	updateAltDKP()
+}
+
+// type RawDKP struct {
+// 	Name            string `csv:"Name"`
+// 	Day             string `csv:"Day"`
+// 	Date            string `csv:"Date"`
+// 	Raid            string `csv:"Raid"`
+// 	AccrualType     string `csv:"Type"`
+// 	Reason          string `csv:"Reason"`
+// 	Points          string `csv:"Points"`
+// 	AltOrSecondMain string `csv:"AltOrSecondMain"`
+// 	Class           string `csv:"Class"`
+// 	GuildRank       string `csv:"GuildRank"`
+// 	Alt             string `csv:"Alt"`
+// 	DKPRank         string `csv:"DKPRank"`
+// 	AttendanceCalc  string `csv:"AttendanceCalc"`
+// 	Level           string `csv:"Level"`
+// }
+
+func TimeStamp() string {
+	ts := time.Now().Format(time.RFC3339)
+	return strings.Replace(ts, ":", "", -1) // get rid of offensive colons
+}
+
+func exportSpentDKP(winners []string, winningBid int, itename string) {
+	var csvDATA string
+	if len(winners) < 1 {
+		return
+	}
+	for _, winner := range winners {
+		// tempDATA := csvDATA
+		if _, ok := Roster[winner]; !ok { // Verify the member is in the map
+			continue
+		}
+		main := getMain(&Roster[winner].GuildMember)
+		day := time.Now().Format("Mon")
+		date := time.Now().Format("01/02")
+		points := fmt.Sprintf("-%d", winningBid)
+		var alt string
+		if main != winner {
+			alt = winner
+		}
+		row := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s\n", main, day, date, date+" BIDBOT_AUTO_FILL", "Spent", itename, points, alt) // Name, Day, Date, Raid, Type, Reason, Points, AltOrSecondMain
+		csvDATA += row
+	}
+	if csvDATA == "" {
+		return
+	}
+	DiscordF(configuration.Discord.InvestigationChannelID, "DKP Entry for %s\n```\n%v\n```", itename, csvDATA)
+}
+
+func exportDKP(path string) {
+	// TODO: Update DKP and Attendance
+	// Info.Printf("Getting Attendance from Google Sheets\n")
+	spreadsheetID := configuration.Sheets.RawSheetURL
+	readRange := configuration.Sheets.RawSheetName
+	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, readRange).Do()
+	if err != nil {
+		Err.Printf("Unable to retrieve data from sheet: %v", err)
+		DiscordF(configuration.Discord.InvestigationChannelID, "Unable to read data from the DKP sheet, cannot perform backup! - %s\n", err)
+		// return errors.New("Unable to retrieve data from sheet: " + err.Error())
+	}
+
+	if len(resp.Values) == 0 {
+		Err.Printf("Cannot read dkp sheet: %v", resp)
+	} else {
+		csvFile, err := os.Create(path)
+		if err != nil {
+			DiscordF(configuration.Discord.InvestigationChannelID, "Unable to write DKP backup! - %s\n", err)
+			// log.Printf("failed creating file: %s", err)
+		}
+		fmt.Printf("Exporting DKP to %s\n", path)
+		csvwriter := csv.NewWriter(csvFile)
+		for _, row := range resp.Values {
+			// if i == 0 {
+			// 	continue // skip the header
+			// }
+			var rec []string
+			for _, record := range row {
+				rec = append(rec, fmt.Sprintf("%s", record))
+			}
+			_ = csvwriter.Write(rec)
+			csvwriter.Flush()
+		}
+		csvwriter.Flush()
+		csvFile.Close()
+		fmt.Printf("Exporting DKP to %s COMPLETE\n", path)
+	}
 }
 
 func addDKPAttendance(name string, date time.Time, dkp int, attendance float64) {
@@ -687,6 +776,8 @@ func (b *OpenBid) CloseBids(out io.Writer) {
 	if b.AutoInvestigate() {
 		uploadArchive(b.MessageID)
 	}
+	// Upload csv of winner dkp changes
+	exportSpentDKP(winners, b.WinningBid, b.Item.Name)
 	// fmt.Fprintf(out, "%s```[%s]", winnerMessage, hash)
 	// Write closed bid investigation file
 
