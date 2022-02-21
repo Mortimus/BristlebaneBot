@@ -312,7 +312,7 @@ func exportSpentDKP(winners []string, winningBid int, itename string) {
 		}
 		main := getMain(&Roster[winner].GuildMember)
 		day := time.Now().Format("Mon")
-		date := time.Now().Format("01/02")
+		date := time.Now().Format("01/02/06")
 		points := fmt.Sprintf("-%d", winningBid)
 		var alt string
 		if main != winner {
@@ -462,7 +462,7 @@ func DKPRankToString(rank DKPRank) string {
 
 // Handle for BidPlugin sends a message if it detects a player has gone linkdead.
 func (p *BidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
-	if msg.Channel == "guild" && msg.Source == "You" {
+	if (msg.Channel == "guild" && msg.Source == "You") || (msg.Channel == "raid" && msg.Source == "You") {
 		{ // Check for open bid
 			if p.HandleMultiBids(msg, out) {
 				return // it's a multi bid, no need to process more

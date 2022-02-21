@@ -9,3 +9,4 @@ Release/*
 *.7z
 *.zip
 Live/*
+backup/*
