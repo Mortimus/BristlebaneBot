@@ -144,7 +144,7 @@ func main() {
 		}
 	}
 
-	DiscordF(configuration.Discord.InvestigationChannelID, "**BidBot online**\n> Secondmains bid as mains: %t\n> Secondmain max bid: %d (0 means infinite)", configuration.Bids.SecondMainsBidAsMains, configuration.Bids.SecondMainAsMainMaxBid)
+	DiscordF(configuration.Discord.InvestigationChannelID, "**BidBot online - %s**\n> Secondmains bid as mains: %t\n> Secondmain max bid: %d (0 means infinite)", getPlayerName(configuration.Everquest.LogPath), configuration.Bids.SecondMainsBidAsMains, configuration.Bids.SecondMainAsMainMaxBid)
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	for {

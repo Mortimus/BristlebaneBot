@@ -75,7 +75,9 @@ func (p *RaidPlugin) Handle(msg *everquest.EqLog, out io.Writer) {
 		if err != nil {
 			fmt.Fprintf(out, "Error finding DKP Dump: %s\n", outputName)
 		} else {
-			discord.ChannelFileSend(configuration.Discord.DKPArchiveChannelID, dkpExportName, dkpfile)
+			if configuration.Discord.UseDiscord {
+				discord.ChannelFileSend(configuration.Discord.DKPArchiveChannelID, dkpExportName, dkpfile)
+			}
 		}
 		var fileName string
 		if !p.NeedsDump { // Boss Kill

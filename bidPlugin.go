@@ -313,18 +313,19 @@ func exportSpentDKP(winners []string, winningBid int, itename string) {
 		main := getMain(&Roster[winner].GuildMember)
 		day := time.Now().Format("Mon")
 		date := time.Now().Format("01/02/06")
+		smallDate := time.Now().Format("01/02")
 		points := fmt.Sprintf("-%d", winningBid)
 		var alt string
 		if main != winner {
 			alt = winner
 		}
-		row := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s\n", main, day, date, date+" BIDBOT_AUTO_FILL", "Spent", itename, points, alt) // Name, Day, Date, Raid, Type, Reason, Points, AltOrSecondMain
+		row := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s\n", main, day, date, smallDate+" BIDBOT_AUTO_FILL", "Spent", itename, points, alt) // Name, Day, Date, Raid, Type, Reason, Points, AltOrSecondMain
 		csvDATA += row
 	}
 	if csvDATA == "" {
 		return
 	}
-	DiscordF(configuration.Discord.InvestigationChannelID, "DKP Entry for %s\n```\n%v\n```", itename, csvDATA)
+	DiscordF(configuration.Discord.InvestigationChannelID, "[%s] DKP Entry for %s\n```\n%v\n```", getPlayerName(configuration.Everquest.LogPath), itename, csvDATA)
 }
 
 func exportDKP(path string) {
@@ -565,7 +566,12 @@ func (p BidPlugin) HandleTell(msg *everquest.EqLog) {
 					if source == "You" {
 						source = getPlayerName(configuration.Everquest.LogPath)
 					}
-					p.Bids[id].AddBid(*Roster[source], bid, *msg)
+					if _, k := Roster[source]; k {
+						p.Bids[id].AddBid(*Roster[source], bid, *msg)
+					} else {
+						Err.Printf("Could not find player %s in roster\n", source)
+						// TODO: Give them unknown rank
+					}
 					return
 				}
 			} // else {
