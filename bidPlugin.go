@@ -312,7 +312,7 @@ func exportSpentDKP(winners []string, winningBid int, itename string) {
 		}
 		main := getMain(&Roster[winner].GuildMember)
 		day := time.Now().Format("Mon")
-		date := time.Now().Format("01/02/06")
+		date := time.Now().Format("1/2/2006")
 		smallDate := time.Now().Format("01/02")
 		points := fmt.Sprintf("-%d", winningBid)
 		var alt string
