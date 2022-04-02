@@ -243,9 +243,9 @@ func updateRosterDKP() {
 				// 06/27/20
 				dateString := fmt.Sprintf("%s", row[configuration.Sheets.RawSheetDateCol])
 				if dateString == "" { // just to lower the logging
-					dateString = "01/01/06" // set to some old date so it's not counted towards current attendance
+					dateString = "1/2/2006" // set to some old date so it's not counted towards current attendance
 				}
-				date, err := time.Parse("01/02/06", dateString)
+				date, err := time.Parse("1/2/2006", dateString)
 				if err != nil {
 					Err.Printf("Error converting attendance time to time.Time at row %d: %s", i+1, err.Error())
 					// continue
