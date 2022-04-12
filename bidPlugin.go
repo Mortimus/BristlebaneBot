@@ -300,7 +300,7 @@ func TimeStamp() string {
 	return strings.Replace(ts, ":", "", -1) // get rid of offensive colons
 }
 
-func exportSpentDKP(winners []string, winningBid int, itename string) {
+func exportSpentDKP(winners []string, winningBid int, itemname string) {
 	var csvDATA string
 	if len(winners) < 1 {
 		return
@@ -319,13 +319,15 @@ func exportSpentDKP(winners []string, winningBid int, itename string) {
 		if main != winner {
 			alt = winner
 		}
-		row := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s\n", main, day, date, smallDate+" BIDBOT_AUTO_FILL", "Spent", itename, points, alt) // Name, Day, Date, Raid, Type, Reason, Points, AltOrSecondMain
+		itemname = strings.ReplaceAll(itemname, "'", "")
+		itemname = strings.ReplaceAll(itemname, "`", "")
+		row := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s\n", main, day, date, smallDate+" BIDBOT_AUTO_FILL", "Spent", itemname, points, alt) // Name, Day, Date, Raid, Type, Reason, Points, AltOrSecondMain
 		csvDATA += row
 	}
 	if csvDATA == "" {
 		return
 	}
-	DiscordF(configuration.Discord.InvestigationChannelID, "[%s] DKP Entry for %s\n```\n%v\n```", getPlayerName(configuration.Everquest.LogPath), itename, csvDATA)
+	DiscordF(configuration.Discord.InvestigationChannelID, "[%s] DKP Entry for %s\n```\n%v\n```", getPlayerName(configuration.Everquest.LogPath), itemname, csvDATA)
 }
 
 func exportDKP(path string) {
